@@ -8,13 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="..\.dockerignore">
-            <Link>.dockerignore</Link>
-        </Content>
+        <PackageReference Include="TgBotLib.Core" Version="1.1.1"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="TgBotLib.Core" Version="1.1.1"/>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 
 </Project>

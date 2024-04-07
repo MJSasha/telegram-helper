@@ -8,7 +8,6 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["TelegramHelper/TelegramHelper.csproj", "TelegramHelper/"]
-COPY ["submodules/tg-bot-lib/src/TgBotLib.Core/TgBotLib.Core.csproj", "submodules/tg-bot-lib/src/TgBotLib.Core/"]
 RUN dotnet restore "TelegramHelper/TelegramHelper.csproj"
 COPY . .
 WORKDIR "/src/TelegramHelper"
