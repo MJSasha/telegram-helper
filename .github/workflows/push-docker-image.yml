@@ -1,0 +1,34 @@
+name: push-docker-image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  push-docker-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Install Docker CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t telegram-helper-img -f TelegramHelper/Dockerfile .
+          docker tag telegram-helper-img "${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest"
+          docker push "${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest"
