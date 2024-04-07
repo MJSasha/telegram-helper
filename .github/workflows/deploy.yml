@@ -38,9 +38,7 @@ jobs:
       - name: Connect to server and update container
         run: |
           ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{secrets.SSH_KNOWN_HOSTS}} "
-            docker login ghcr.io --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
-            docker login --username username --password password server
-            docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im &&
+            docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-imп &&
             docker stop telegram-helper-im &&
             docker rm telegram-helper-im &&
             docker run -d --name telegram-helper-im -e BOT_TOKEN='2065215367:AAEKo4QKE7BmbH7JmUdL57YTPjj7YGeemzA' -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' ${{ secrets.DOCKER_USERNAME }}/telegram-helper-img
