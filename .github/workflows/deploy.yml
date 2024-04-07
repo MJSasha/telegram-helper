@@ -37,7 +37,7 @@ jobs:
 
       - name: Connect to server and update container
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{secrets.SSH_KNOWN_HOSTS}}"
+          ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{secrets.SSH_KNOWN_HOSTS}} "
             docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im &&
             docker stop telegram-helper-im &&
             docker rm telegram-helper-im &&
