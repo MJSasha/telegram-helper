@@ -1,0 +1,47 @@
+name: Deploy
+
+on:
+  workflow_run:
+    
+    types:
+      - completed
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Install ssh
+        run: sudo apt-get install openssh-client -y
+
+      - name: Create SSH key
+        run: |
+          sudo mkdir -p ~/.ssh/
+          sudo echo "$SSH_PRIVATE_KEY" > ../private.key
+          sudo chmod 600 ../private.key
+          sudo echo "$SSH_KNOWN_HOSTS" > ../known_hosts
+          sudo chmod 600 ../known_hosts
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
+          SSH_KNOWN_HOSTS: ${{secrets.SSH_KNOWN_HOSTS}}
+          SSH_KEY_PATH: ${{ github.workspace }}/../private.key
+
+
+      - name: Connect to server and update container
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{secrets.SSH_KNOWN_HOSTS}}"
+            docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im &&
+            docker stop telegram-helper-im &&
+            docker rm telegram-helper-im &&
+            docker run -d --name telegram-helper-im -e BOT_TOKEN='2065215367:AAEKo4QKE7BmbH7JmUdL57YTPjj7YGeemzA' -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im
+          "
