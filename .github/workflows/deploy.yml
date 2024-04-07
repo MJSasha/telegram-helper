@@ -37,8 +37,8 @@ jobs:
 
       - name: Connect to server and update container
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{ secrets.DOCKER_PASSWORD }} "
-            docker login ghcr.io --username ${{ secrets.DOCKER_USERNAME }} --password "$COMPETITON_WEB_KEY"
+          ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{secrets.SSH_KNOWN_HOSTS}} "
+            docker login ghcr.io --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
             docker login --username username --password password server
             docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im &&
             docker stop telegram-helper-im &&
