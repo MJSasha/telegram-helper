@@ -41,5 +41,5 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im &&
             docker stop telegram-helper-im &&
             docker rm telegram-helper-im &&
-            docker run -d --name telegram-helper-im -e BOT_TOKEN='2065215367:AAEKo4QKE7BmbH7JmUdL57YTPjj7YGeemzA' -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' ${{ secrets.DOCKER_USERNAME }}/telegram-helper-im
+            docker run -d --name telegram-helper-im -e BOT_TOKEN='2065215367:AAEKo4QKE7BmbH7JmUdL57YTPjj7YGeemzA' -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' ${{ secrets.DOCKER_USERNAME }}/telegram-helper-img
           "
