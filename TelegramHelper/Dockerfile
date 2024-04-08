@@ -11,7 +11,9 @@ COPY ["TelegramHelper/TelegramHelper.csproj", "TelegramHelper/"]
 RUN dotnet restore "TelegramHelper/TelegramHelper.csproj"
 COPY . .
 WORKDIR "/src/TelegramHelper"
+RUN dotnet build "TelegramHelper.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "TelegramHelper.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
