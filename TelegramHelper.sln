@@ -8,8 +8,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramHelper.Infrastructu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramHelper.Domain", "TelegramHelper.Domain\TelegramHelper.Domain.csproj", "{1BAD48B8-A2AC-49D5-958E-50CD09504564}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TgBotLib.Core", "..\tg-bot-lib\src\TgBotLib.Core\TgBotLib.Core.csproj", "{F04D9CA1-74DE-4423-850D-58FA063E1DF1}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,15 +26,10 @@ Global
 		{1BAD48B8-A2AC-49D5-958E-50CD09504564}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BAD48B8-A2AC-49D5-958E-50CD09504564}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BAD48B8-A2AC-49D5-958E-50CD09504564}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F04D9CA1-74DE-4423-850D-58FA063E1DF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F04D9CA1-74DE-4423-850D-58FA063E1DF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F04D9CA1-74DE-4423-850D-58FA063E1DF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F04D9CA1-74DE-4423-850D-58FA063E1DF1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EE630FDE-A0B6-4ABE-B77F-49C9B856C309} = {644F3A05-85C6-48E8-A345-2F6833F04572}
 		{DCBDA047-2281-4DB8-8265-F1746758A495} = {644F3A05-85C6-48E8-A345-2F6833F04572}
 		{1BAD48B8-A2AC-49D5-958E-50CD09504564} = {644F3A05-85C6-48E8-A345-2F6833F04572}
-		{F04D9CA1-74DE-4423-850D-58FA063E1DF1} = {644F3A05-85C6-48E8-A345-2F6833F04572}
 	EndGlobalSection
 EndGlobal

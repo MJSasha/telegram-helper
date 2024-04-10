@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TelegramHelper.Domain.Entities;
+using TelegramHelper.Domain.Models;
 
 namespace TelegramHelper.Infrastructure.Repositories;
 
@@ -23,9 +24,15 @@ internal class CategoriesRepository
         return _dbContext.Categories.FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public Task<List<Category>> GetCategories(int skip, int take)
+    public async Task<ReadResult<Category>> GetCategories(int skip, int take)
     {
-        return _dbContext.Categories.Skip(skip).Take(take).ToListAsync();
+        var result = await _dbContext.Categories.Where(c => c.ParentCategoryId == null).Skip(skip).Take(take).ToListAsync();
+        var totalCount = await _dbContext.Categories.Where(c => c.ParentCategoryId == null).CountAsync();
+        return new ReadResult<Category>
+        {
+            Data = result,
+            TotalCount = totalCount
+        };
     }
 
     public Task<List<Category>> GetSubCategories(Guid id, int skip, int take)

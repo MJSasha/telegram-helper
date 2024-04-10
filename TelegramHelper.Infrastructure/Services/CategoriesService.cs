@@ -1,4 +1,5 @@
 using TelegramHelper.Domain.Entities;
+using TelegramHelper.Domain.Models;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Infrastructure.Repositories;
 
@@ -17,7 +18,7 @@ internal class CategoriesService : ICategoriesService
 
     public Task<Category> GetCategoryById(Guid id) => _categoriesRepository.GetCategoryById(id);
 
-    public Task<List<Category>> GetCategories(int skip, int take) => _categoriesRepository.GetCategories(skip, take);
+    public Task<ReadResult<Category>> GetCategories(int skip, int take) => _categoriesRepository.GetCategories(skip, take);
 
     public Task<List<Category>> GetSubCategories(Guid categoryId, int skip, int take) => _categoriesRepository.GetSubCategories(categoryId, skip, take);
 }

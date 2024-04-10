@@ -1,3 +1,4 @@
+using Telegram.Bot;
 using TelegramHelper.Definitions;
 using TgBotLib.Core;
 using TgBotLib.Core.Base;
@@ -14,13 +15,15 @@ public class BaseMessagesController : BotController
     }
 
     [Message("/start")]
-    public Task Start()
+    public async Task Start()
     {
+        await Client.DeleteMessageAsync(Update.GetChatId(), Update.Message.MessageId);
+
         _buttonsGenerationService.SetInlineButtons(
             ("Категории", nameof(CategoriesController.DisplayCategories))
         );
 
-        return Client.SendMdTextMessage(Update.GetChatId(),
+        await Client.SendMdTextMessage(Update.GetChatId(),
             Messages.Base.StartText,
             replyMarkup: _buttonsGenerationService.GetButtons());
     }
