@@ -19,7 +19,7 @@ internal class CategoriesRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public Task<Category> GetCategoryById(Guid id)
+    public Task<Category?> GetCategoryById(Guid id)
     {
         return _dbContext.Categories.FirstOrDefaultAsync(x => x.Id == id);
     }
@@ -35,8 +35,14 @@ internal class CategoriesRepository
         };
     }
 
-    public Task<List<Category>> GetSubCategories(Guid id, int skip, int take)
+    public async Task<ReadResult<Category>> GetSubCategories(Guid id, int skip, int take)
     {
-        return _dbContext.Categories.Where(x => x.ParentCategoryId == id).Skip(skip).Take(take).ToListAsync();
+        var result = await _dbContext.Categories.Where(x => x.ParentCategoryId == id).Skip(skip).Take(take).ToListAsync();
+        var totalCount = await _dbContext.Categories.Where(x => x.ParentCategoryId == id).CountAsync();
+        return new ReadResult<Category>
+        {
+            Data = result,
+            TotalCount = totalCount
+        };
     }
 }

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using TelegramHelper.Definitions;
 using TelegramHelper.Domain.Entities;
 
 namespace TelegramHelper.Utils;
@@ -9,7 +10,7 @@ public static class Extensions
     {
         return (
             category.Name.TrimName(),
-            $"category:{category.Id}"
+            $"{CallbacksTags.ParentCategory}:{category.Id};"
         );
     }
 

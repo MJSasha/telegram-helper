@@ -16,9 +16,9 @@ internal class CategoriesService : ICategoriesService
 
     public Task AddCategory(Category category) => _categoriesRepository.AddCategory(category);
 
-    public Task<Category> GetCategoryById(Guid id) => _categoriesRepository.GetCategoryById(id);
+    public Task<Category?> GetCategoryById(Guid id) => _categoriesRepository.GetCategoryById(id);
 
     public Task<ReadResult<Category>> GetCategories(int skip, int take) => _categoriesRepository.GetCategories(skip, take);
 
-    public Task<List<Category>> GetSubCategories(Guid categoryId, int skip, int take) => _categoriesRepository.GetSubCategories(categoryId, skip, take);
+    public Task<ReadResult<Category>> GetSubCategories(Guid categoryId, int skip, int take) => _categoriesRepository.GetSubCategories(categoryId, skip, take);
 }

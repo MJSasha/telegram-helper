@@ -2,6 +2,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramHelper.Definitions;
 using TelegramHelper.Domain.Entities;
+using TelegramHelper.Domain.Models;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Utils;
 using TgBotLib.Core;
@@ -23,62 +24,75 @@ public class CategoriesController : BotController
     }
 
     [Callback(nameof(DisplayCategories))]
+    [Callback($"{CallbacksTags.CategoryPagination}:(.*?);", isPattern: true)]
+    [Callback($"{CallbacksTags.ParentCategory}:(.*?);", isPattern: true)]
+    [Callback($"{CallbacksTags.CategoryPagination}:(.*?);{CallbacksTags.ParentCategory}:(.*?);", isPattern: true)]
     public async Task DisplayCategories()
     {
-        var readResult = await _categoriesService.GetCategories(0, PageSize);
-        AddCalegoriesButtons(readResult.Data);
+        var showForParent = Guid.TryParse(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory), out var parentCategoryId);
+        var page = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.CategoryPagination) ?? "0";
+        var pageNumber = int.Parse(page);
+        ReadResult<Category> readResult;
+        Category? parentCategory = null;
 
-        if (readResult.TotalCount > PageSize * 2)
+        if (!showForParent)
         {
-            _buttonsGenerationService.SetInlineButtons(
-                (Messages.Categories.ViewNotes, Messages.Categories.ViewNotes),
-                (Messages.Elements.ArrowRight, $"{CallbacksTags.ChannelPagination}:1;")
-            );
+            readResult = await _categoriesService.GetCategories(pageNumber * PageSize, PageSize);
         }
         else
         {
-            _buttonsGenerationService.SetInlineButtons(
-                (Messages.Categories.ViewNotes, Messages.Categories.ViewNotes)
-            );
+            parentCategory = await _categoriesService.GetCategoryById(parentCategoryId);
+            readResult = await _categoriesService.GetSubCategories(parentCategoryId, pageNumber * PageSize, PageSize);
         }
 
-        await Client.EditMessageTextAsync(Update.GetChatId(),
-            Update.CallbackQuery.Message.MessageId,
-            text: Messages.Categories.SelectCategory,
-            replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
-        );
+        AddCategoriesButtons(readResult.Data);
+
+        List<(string, string)> buttonsMarkup = [];
+        if (pageNumber > 0)
+        {
+            buttonsMarkup.Add((Messages.Elements.ArrowLeft, $"{CallbacksTags.CategoryPagination}:{pageNumber - 1};"));
+        }
+
+        buttonsMarkup.Add((Messages.Categories.ViewNotes, Messages.Categories.ViewNotes));
+
+        if (readResult.TotalCount > (pageNumber + 1) * PageSize)
+        {
+            buttonsMarkup.Add((Messages.Elements.ArrowRight, $"{CallbacksTags.CategoryPagination}:{pageNumber + 1};"));
+        }
+
+        _buttonsGenerationService.SetInlineButtons(buttonsMarkup.ToArray());
+
+        await SendCategoriesPaginationList(parentCategory);
     }
 
-    [Callback($"{CallbacksTags.ChannelPagination}:(.*?);", isPattern: true)]
-    public async Task DisplayPaginatedCategories()
+    private async Task SendCategoriesPaginationList(Category? parentCategory)
     {
-        var page = int.Parse(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ChannelPagination));
-        var readResult = await _categoriesService.GetCategories(page * PageSize, PageSize);
-        AddCalegoriesButtons(readResult.Data);
-
-        if (readResult.TotalCount > (page + 1) * PageSize)
+        if (Update.CallbackQuery.Data.Equals(nameof(DisplayCategories)))
         {
-            _buttonsGenerationService.SetInlineButtons(
-                (Messages.Elements.ArrowLeft, page == 1 ? nameof(DisplayCategories) : $"{CallbacksTags.ChannelPagination}:{page - 1};"),
-                (Messages.Categories.ViewNotes, Messages.Categories.ViewNotes),
-                (Messages.Elements.ArrowRight, $"{CallbacksTags.ChannelPagination}:{page + 1};")
+            await Client.EditMessageTextAsync(Update.GetChatId(),
+                Update.CallbackQuery.Message.MessageId,
+                text: Messages.Categories.SelectCategory,
+                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
+            );
+        }
+        else if (parentCategory != null)
+        {
+            await Client.EditMessageTextAsync(Update.GetChatId(),
+                Update.CallbackQuery.Message.MessageId,
+                text: parentCategory.Name,
+                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
             );
         }
         else
         {
-            _buttonsGenerationService.SetInlineButtons(
-                (Messages.Elements.ArrowLeft, page == 1 ? nameof(DisplayCategories) : $"{CallbacksTags.ChannelPagination}:{page - 1};"),
-                (Messages.Categories.ViewNotes, Messages.Categories.ViewNotes)
+            await Client.EditMessageReplyMarkupAsync(Update.GetChatId(),
+                Update.CallbackQuery.Message.MessageId,
+                replyMarkup: (InlineKeyboardMarkup?)_buttonsGenerationService.GetButtons()
             );
         }
-
-        await Client.EditMessageReplyMarkupAsync(Update.GetChatId(),
-            Update.CallbackQuery.Message.MessageId,
-            replyMarkup: (InlineKeyboardMarkup?)_buttonsGenerationService.GetButtons()
-        );
     }
 
-    private void AddCalegoriesButtons(List<Category> categories)
+    private void AddCategoriesButtons(List<Category> categories)
     {
         for (var i = 0; i < categories.Count; i += 2)
         {
