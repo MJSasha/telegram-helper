@@ -46,23 +46,43 @@ public class CategoriesController : BotController
         }
 
         AddCategoriesButtons(readResult.Data);
+        AddPaginationButtons(pageNumber, readResult, showForParent ? parentCategoryId : null);
+        AddGoBackButton(parentCategory);
+
+        await SendCategoriesPaginationList(parentCategory);
+    }
+
+    private void AddGoBackButton(Category? parentCategory)
+    {
+        if (parentCategory != null)
+        {
+            _buttonsGenerationService.SetInlineButtons(
+                (Messages.Elements.GoBack, parentCategory.ParentCategoryId == null
+                    ? nameof(DisplayCategories)
+                    : $"{CallbacksTags.ParentCategory}:{parentCategory.ParentCategoryId}")
+            );
+        }
+    }
+
+    private void AddPaginationButtons(int pageNumber, ReadResult<Category> readResult, Guid? parentCategoryId)
+    {
+        var parentCategoryTag = $"{(parentCategoryId != default ? $"{CallbacksTags.ParentCategory}:{parentCategoryId};" : string.Empty)}";
 
         List<(string, string)> buttonsMarkup = [];
         if (pageNumber > 0)
         {
-            buttonsMarkup.Add((Messages.Elements.ArrowLeft, $"{CallbacksTags.CategoryPagination}:{pageNumber - 1};"));
+            buttonsMarkup.Add((Messages.Elements.ArrowLeft,
+                $"{CallbacksTags.CategoryPagination}:{pageNumber - 1};{parentCategoryTag}"));
         }
 
         buttonsMarkup.Add((Messages.Categories.ViewNotes, Messages.Categories.ViewNotes));
-
         if (readResult.TotalCount > (pageNumber + 1) * PageSize)
         {
-            buttonsMarkup.Add((Messages.Elements.ArrowRight, $"{CallbacksTags.CategoryPagination}:{pageNumber + 1};"));
+            buttonsMarkup.Add((Messages.Elements.ArrowRight,
+                $"{CallbacksTags.CategoryPagination}:{pageNumber + 1};{parentCategoryTag}"));
         }
 
         _buttonsGenerationService.SetInlineButtons(buttonsMarkup.ToArray());
-
-        await SendCategoriesPaginationList(parentCategory);
     }
 
     private async Task SendCategoriesPaginationList(Category? parentCategory)

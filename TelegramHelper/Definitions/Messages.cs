@@ -18,5 +18,6 @@ public static class Messages
     {
         public const string ArrowLeft = "⬅️";
         public const string ArrowRight = "➡️";
+        public const string GoBack = "↩️";
     }
 }
