@@ -14,17 +14,14 @@ internal class NotesService : INotesService
         _notesRepository = notesRepository;
     }
 
-    public async Task AddNote(Note note, Guid categoryId)
+    public async Task AddNote(Note note)
     {
-        note.CategoryId = categoryId;
-
-        // TODO: check note exist
         await _notesRepository.Create(note);
     }
 
-    public Task<Note> GetNoteById(Guid id) => _notesRepository.GetById(id);
+    public Task<Note> GetNoteById(Guid id, bool includeCategories = false) => _notesRepository.GetById(id, includeCategories);
 
-    public Task<List<Note>> GetByTitlePart(string name, int skip, int take) => _notesRepository.GetByTitlePart(name, skip, take);
+    public Task<List<Note>> GetByTitlePart(string name, int skip, int take, bool includeCategories = false) => _notesRepository.GetByTitlePart(name, skip, take, includeCategories);
 
     public Task<ReadResult<Note>> GetNotesByCategoryId(Guid id, int skip, int take) => _notesRepository.GetNotesByCategoryId(id, skip, take);
 }

@@ -1,12 +1,13 @@
 using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramHelper.Definitions;
 using TelegramHelper.Domain.Entities;
-using TelegramHelper.Domain.Enums;
 using TelegramHelper.Domain.Models;
 using TelegramHelper.Infrastructure;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Utils;
+using TelegramHelper.Utils.Helpers;
 using TgBotLib.Core;
 using TgBotLib.Core.Base;
 
@@ -47,7 +48,7 @@ public class CategoriesController : BotController
         }
         else
         {
-            parentCategory = await _categoriesService.GetCategoryById(parentCategoryId);
+            parentCategory = await _categoriesService.GetCategoryById(parentCategoryId, includeParent: true);
             readResult = await _categoriesService.GetSubCategories(parentCategoryId, pageNumber * PageSize, PageSize);
         }
 
@@ -63,11 +64,10 @@ public class CategoriesController : BotController
     [Callback($"{nameof(StartCreatingCategory)}:(.*?);", isPattern: true)]
     public async Task StartCreatingCategory()
     {
-        var currentUser = await _usersService.GetUser(Update.GetChatId());
-        if (currentUser?.Role is UserRole.Admin or UserRole.Editor)
+        if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
         {
             var category = new Category();
-            var parentCategoryId = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory);
+            var parentCategoryId = Update.CallbackQuery.Data.GetTagValue(nameof(StartCreatingCategory));
             if (!string.IsNullOrWhiteSpace(parentCategoryId)) category.ParentCategoryId = Guid.Parse(parentCategoryId);
 
             _usersActionsService.HandleUser(Update.GetChatId(), nameof(StartCreatingCategory), category);
@@ -82,8 +82,7 @@ public class CategoriesController : BotController
     [ActionStep(nameof(StartCreatingCategory), step: 0)]
     public async Task CompleteCategoryCreating()
     {
-        var currentUser = await _usersService.GetUser(Update.GetChatId());
-        if (currentUser?.Role is UserRole.Admin or UserRole.Editor)
+        if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
         {
             var category = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Category>();
             category.Name = Update.GetMessageText();
@@ -100,14 +99,22 @@ public class CategoriesController : BotController
 
     private async Task AddCreateButton(Category? parentCategory)
     {
-        var currentUser = await _usersService.GetUser(Update.GetChatId());
-        if (currentUser?.Role is UserRole.Admin or UserRole.Editor)
+        if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
         {
-            _buttonsGenerationService.SetInlineButtons(
-                (Messages.Elements.Add, parentCategory != null
-                    ? $"{nameof(StartCreatingCategory)}:{parentCategory.Id};"
-                    : nameof(StartCreatingCategory))
-            );
+            List<(string, string)> markup = [];
+            if (parentCategory != null)
+            {
+                markup.AddRange([
+                    (Messages.Elements.AddCategory, $"{nameof(StartCreatingCategory)}:{parentCategory.Id};"),
+                    (Messages.Elements.AddNote, $"{nameof(NotesController.StartNoteCreating)}:{parentCategory.Id};")
+                ]);
+            }
+            else
+            {
+                markup.Add((Messages.Elements.AddCategory, nameof(StartCreatingCategory)));
+            }
+
+            _buttonsGenerationService.SetInlineButtons(markup.ToArray());
         }
     }
 
@@ -157,15 +164,18 @@ public class CategoriesController : BotController
             await Client.EditMessageTextAsync(Update.GetChatId(),
                 Update.CallbackQuery.Message.MessageId,
                 text: Messages.Categories.SelectCategory,
-                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
+                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
+                parseMode: ParseMode.MarkdownV2
             );
         }
         else if (parentCategory != null)
         {
+            var message = string.Format(Messages.Categories.CategoryTemplate, MessageFormatHelper.GetCategoryHierarchy(parentCategory));
             await Client.EditMessageTextAsync(Update.GetChatId(),
                 Update.CallbackQuery.Message.MessageId,
-                text: parentCategory.Name,
-                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
+                text: message.EscapeMarkdownSpecialCharacters(),
+                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
+                parseMode: ParseMode.MarkdownV2
             );
         }
         else
