@@ -39,17 +39,18 @@ internal class NotesRepository
 
     public async Task<List<Note>> GetByTitlePart(string name, int skip, int take, bool includeCategories)
     {
-        var notes = await _dbContext.Notes.Where(x => x.Title.Contains(name)).Skip(skip).Take(take).ToListAsync();
+        var query = _dbContext.Notes.Where(x => x.Title.Contains(name)).Skip(skip).Take(take);
 
         if (includeCategories)
         {
+            var notes = await query.ToListAsync();
             foreach (var note in notes)
             {
                 await LoadParentCategoriesRecursive(note.Category);
             }
         }
 
-        return notes;
+        return await query.ToListAsync();
     }
 
     public async Task<ReadResult<Note>> GetNotesByCategoryId(Guid id, int skip, int take)
