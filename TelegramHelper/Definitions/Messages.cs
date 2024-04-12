@@ -11,7 +11,7 @@ public static class Messages
     public static class Categories
     {
         public const string SelectCategory = "Выберите категорию:";
-        public const string ViewNotes = "Посмотреть заметки";
+        public const string ViewNotes = "📒 Заметки";
         public const string EnterCategoryName = "Введите категорию:";
         public const string CategoryCreated = "Категория добавлена!";
     }
