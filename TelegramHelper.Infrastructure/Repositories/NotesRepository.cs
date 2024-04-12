@@ -19,9 +19,22 @@ internal class NotesRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public Task<Note> GetById(Guid id)
+    public async Task<Note> GetById(Guid id, bool includeCategories)
     {
-        return _dbContext.Notes.FirstOrDefaultAsync(x => x.Id == id);
+        var query = _dbContext.Notes.Include(x => x.Category).AsQueryable();
+
+        if (includeCategories)
+        {
+            var note = await query.FirstOrDefaultAsync(x => x.Id == id);
+            if (note != null)
+            {
+                await LoadParentCategoriesRecursive(note.Category);
+            }
+
+            return note;
+        }
+
+        return await query.FirstOrDefaultAsync(x => x.Id == id);
     }
 
     public Task<List<Note>> GetByTitlePart(string name, int skip, int take)
@@ -38,5 +51,17 @@ internal class NotesRepository
             Data = result,
             TotalCount = totalCount
         };
+    }
+
+    private async Task LoadParentCategoriesRecursive(Category category)
+    {
+        if (category == null || category.ParentCategoryId == null)
+            return;
+
+        await _dbContext.Entry(category)
+            .Reference(c => c.ParentCategory)
+            .LoadAsync();
+
+        await LoadParentCategoriesRecursive(category.ParentCategory);
     }
 }

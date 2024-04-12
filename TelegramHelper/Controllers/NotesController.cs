@@ -52,6 +52,18 @@ public class NotesController : BotController
         );
     }
 
+    [Callback($"{CallbacksTags.Note}:(.*?);", isPattern: true)]
+    public async Task ShowNote()
+    {
+        var noteId = new Guid(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Note));
+        var note = await _notesService.GetNoteById(noteId, includeCategories: true);
+
+        var message = string.Format(Messages.Notes.NoteTemplate, note.Title, note.Content, GetCategoryHierarchy(note.Category));
+
+        Client.SendMdTextMessage(Update.GetChatId(), message);
+    }
+
+
     [Callback($"{nameof(StartNoteCreating)}:(.*?);", isPattern: true)]
     public async Task StartNoteCreating()
     {
@@ -100,6 +112,25 @@ public class NotesController : BotController
                 replyMarkup: _buttonsGenerationService.GetButtons()
             );
         }
+    }
+
+    private string GetCategoryHierarchy(Category category)
+    {
+        if (category == null) return string.Empty;
+
+        var categoryHierarchy = new List<string>();
+        BuildCategoryHierarchy(category, categoryHierarchy);
+        categoryHierarchy.Reverse();
+
+        return string.Join(" ➡ ", categoryHierarchy);
+    }
+
+    private void BuildCategoryHierarchy(Category category, List<string> hierarchy)
+    {
+        if (category == null) return;
+
+        hierarchy.Add(category.Name);
+        BuildCategoryHierarchy(category.ParentCategory, hierarchy);
     }
 
     private void AddGoBackButton(Guid categoryId)

@@ -19,7 +19,7 @@ internal class NotesService : INotesService
         await _notesRepository.Create(note);
     }
 
-    public Task<Note> GetNoteById(Guid id) => _notesRepository.GetById(id);
+    public Task<Note> GetNoteById(Guid id, bool includeCategories = false) => _notesRepository.GetById(id, includeCategories);
 
     public Task<List<Note>> GetByTitlePart(string name, int skip, int take) => _notesRepository.GetByTitlePart(name, skip, take);
 

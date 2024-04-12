@@ -21,6 +21,7 @@ public static class Messages
         public const string EnterNoteTitle = "Введите название заметки:";
         public const string EnterNoteText = "Введите заметку:";
         public const string NoteCreated = "Заметка добавлена!";
+        public const string NoteTemplate = "*{0}*\n\n{1}\n\n_Категория: {2}_";
     }
 
     public static class Users
