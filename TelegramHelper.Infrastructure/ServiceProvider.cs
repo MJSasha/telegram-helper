@@ -18,8 +18,10 @@ public static class ServiceProvider
         services
             .AddTransient<NotesRepository>()
             .AddTransient<CategoriesRepository>()
+            .AddTransient<UsersRepository>()
             .AddTransient<ICategoriesService, CategoriesService>()
             .AddTransient<INotesService, NotesService>()
+            .AddTransient<IUsersService, UsersService>()
             ;
 
         return services;

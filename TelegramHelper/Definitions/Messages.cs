@@ -16,10 +16,17 @@ public static class Messages
         public const string CategoryCreated = "Категория добавлена!";
     }
 
+    public static class Users
+    {
+        public const string EnterName = "Введите имя:";
+        public const string YouAreRegistered = "Вы зарегистрированны! Ваш код: {0}\n\nПродолжить - /start";
+    }
+
     public static class Elements
     {
         public const string ArrowLeft = "⬅️";
         public const string ArrowRight = "➡️";
         public const string GoBack = "↩️";
+        public const string Add = "➕";
     }
 }

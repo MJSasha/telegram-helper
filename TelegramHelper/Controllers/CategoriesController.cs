@@ -2,7 +2,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramHelper.Definitions;
 using TelegramHelper.Domain.Entities;
+using TelegramHelper.Domain.Enums;
 using TelegramHelper.Domain.Models;
+using TelegramHelper.Infrastructure;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Utils;
 using TgBotLib.Core;
@@ -17,12 +19,14 @@ public class CategoriesController : BotController
     private readonly IInlineButtonsGenerationService _buttonsGenerationService;
     private readonly ICategoriesService _categoriesService;
     private readonly IUsersActionsService _usersActionsService;
+    private readonly IUsersService _usersService;
 
-    public CategoriesController(IInlineButtonsGenerationService buttonsGenerationService, ICategoriesService categoriesService, IUsersActionsService usersActionsService)
+    public CategoriesController(IInlineButtonsGenerationService buttonsGenerationService, ICategoriesService categoriesService, IUsersActionsService usersActionsService, IUsersService usersService)
     {
         _buttonsGenerationService = buttonsGenerationService;
         _categoriesService = categoriesService;
         _usersActionsService = usersActionsService;
+        _usersService = usersService;
     }
 
     [Callback(nameof(DisplayCategories))]
@@ -50,40 +54,61 @@ public class CategoriesController : BotController
         AddCategoriesButtons(readResult.Data);
         AddPaginationButtons(pageNumber, readResult, showForParent ? parentCategoryId : null);
         AddGoBackButton(parentCategory);
+        await AddCreateButton(parentCategory);
 
         await SendCategoriesPaginationList(parentCategory);
     }
 
     [Callback(nameof(StartCreatingCategory))]
     [Callback($"{nameof(StartCreatingCategory)}:(.*?);", isPattern: true)]
-    public Task StartCreatingCategory()
+    public async Task StartCreatingCategory()
     {
-        var category = new Category();
-        var parentCategoryId = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory);
-        if (!string.IsNullOrWhiteSpace(parentCategoryId)) category.ParentCategoryId = Guid.Parse(parentCategoryId);
+        var currentUser = await _usersService.GetUser(Update.GetChatId());
+        if (currentUser?.Role is UserRole.Admin or UserRole.Editor)
+        {
+            var category = new Category();
+            var parentCategoryId = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory);
+            if (!string.IsNullOrWhiteSpace(parentCategoryId)) category.ParentCategoryId = Guid.Parse(parentCategoryId);
 
-        // TODO: add payload
-        _usersActionsService.HandleUser(Update.GetChatId(), nameof(StartCreatingCategory));
+            _usersActionsService.HandleUser(Update.GetChatId(), nameof(StartCreatingCategory), category);
 
-        return Client.EditMessageTextAsync(Update.GetChatId(),
-            Update.CallbackQuery.Message.MessageId,
-            Messages.Categories.EnterCategoryName
-        );
+            await Client.EditMessageTextAsync(Update.GetChatId(),
+                Update.CallbackQuery.Message.MessageId,
+                Messages.Categories.EnterCategoryName
+            );
+        }
     }
 
     [ActionStep(nameof(StartCreatingCategory), step: 0)]
     public async Task CompleteCategoryCreating()
     {
-        // TODO: get category from payload
-        var category = _usersActionsService.GetUserActionStepInfo(Update.GetChatId());
-        // await _categoriesService.AddCategory(category);
+        var currentUser = await _usersService.GetUser(Update.GetChatId());
+        if (currentUser?.Role is UserRole.Admin or UserRole.Editor)
+        {
+            var category = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Category>();
+            category.Name = Update.GetMessageText();
+            await _categoriesService.AddCategory(category);
 
-        // _buttonsGenerationService.SetInlineButtons(category.GetCategoryButton());
+            _buttonsGenerationService.SetInlineButtons(category.GetCategoryButton());
 
-        await Client.SendTextMessageAsync(Update.GetChatId(),
-            Messages.Categories.CategoryCreated,
-            replyMarkup: _buttonsGenerationService.GetButtons()
-        );
+            await Client.SendTextMessageAsync(Update.GetChatId(),
+                Messages.Categories.CategoryCreated,
+                replyMarkup: _buttonsGenerationService.GetButtons()
+            );
+        }
+    }
+
+    private async Task AddCreateButton(Category? parentCategory)
+    {
+        var currentUser = await _usersService.GetUser(Update.GetChatId());
+        if (currentUser?.Role is UserRole.Admin or UserRole.Editor)
+        {
+            _buttonsGenerationService.SetInlineButtons(
+                (Messages.Elements.Add, parentCategory != null
+                    ? $"{nameof(StartCreatingCategory)}:{parentCategory.Id};"
+                    : nameof(StartCreatingCategory))
+            );
+        }
     }
 
     private void AddGoBackButton(Category? parentCategory)
