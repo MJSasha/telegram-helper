@@ -40,18 +40,20 @@ public class NotesController : BotController
         var categoryId = new Guid(Update.CallbackQuery.Data.GetTagValue(nameof(DisplayNotes)));
         var page = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Pagination) ?? "0";
         var pageNumber = int.Parse(page);
-        var category = await _categoriesService.GetCategoryById(categoryId);
+        var category = await _categoriesService.GetCategoryById(categoryId, includeParent: true);
         var readResult = await _notesService.GetNotesByCategoryId(categoryId, pageNumber * PageSize, PageSize);
 
         AddNotesButtons(readResult.Data);
         AddPaginationButtons(pageNumber, readResult);
         AddGoBackButton(category.Id);
 
+        var message = string.Format(Messages.Notes.CategoryTitleTemplate, MessageFormatHelper.GetCategoryHierarchy(category));
         await Client.EditMessageTextAsync(
             Update.GetChatId(),
             Update.CallbackQuery.Message.MessageId,
-            text: category.Name,
-            replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
+            text: message.EscapeMarkdownSpecialCharacters(),
+            replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
+            parseMode: ParseMode.MarkdownV2
         );
     }
 

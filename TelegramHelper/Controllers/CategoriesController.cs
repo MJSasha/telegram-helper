@@ -170,9 +170,10 @@ public class CategoriesController : BotController
         }
         else if (parentCategory != null)
         {
+            var message = string.Format(Messages.Categories.CategoryTemplate, MessageFormatHelper.GetCategoryHierarchy(parentCategory));
             await Client.EditMessageTextAsync(Update.GetChatId(),
                 Update.CallbackQuery.Message.MessageId,
-                text: string.Format(Messages.Categories.CategoryTemplate, MessageFormatHelper.GetCategoryHierarchy(parentCategory)),
+                text: message.EscapeMarkdownSpecialCharacters(),
                 replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
                 parseMode: ParseMode.MarkdownV2
             );
