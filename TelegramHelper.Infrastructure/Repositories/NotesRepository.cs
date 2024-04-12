@@ -39,7 +39,7 @@ internal class NotesRepository
 
     public async Task<List<Note>> GetByTitlePart(string name, int skip, int take, bool includeCategories)
     {
-        var query = _dbContext.Notes.Where(x => x.Title.Contains(name)).Skip(skip).Take(take);
+        var query = _dbContext.Notes.Where(x => x.Title.Contains(name)).Skip(skip).Take(take).AsQueryable();
 
         if (includeCategories)
         {
