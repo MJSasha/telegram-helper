@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TelegramHelper.Domain.Entities;
+using TelegramHelper.Domain.Models;
 
 namespace TelegramHelper.Infrastructure.Repositories;
 
@@ -28,8 +29,14 @@ internal class NotesRepository
         return _dbContext.Notes.Where(x => x.Title.Contains(name)).Skip(skip).Take(take).ToListAsync();
     }
 
-    public Task<List<Note>> GetNotesByCategoryId(Guid id)
+    public async Task<ReadResult<Note>> GetNotesByCategoryId(Guid id, int skip, int take)
     {
-        return _dbContext.Notes.Where(x => x.CategoryId == id).ToListAsync();
+        var result = await _dbContext.Notes.Where(x => x.CategoryId == id).Skip(skip).Take(take).ToListAsync();
+        var totalCount = await _dbContext.Notes.Where(x => x.CategoryId == id).CountAsync();
+        return new ReadResult<Note>
+        {
+            Data = result,
+            TotalCount = totalCount
+        };
     }
 }

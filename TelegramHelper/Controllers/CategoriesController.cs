@@ -16,21 +16,23 @@ public class CategoriesController : BotController
 
     private readonly IInlineButtonsGenerationService _buttonsGenerationService;
     private readonly ICategoriesService _categoriesService;
+    private readonly IUsersActionsService _usersActionsService;
 
-    public CategoriesController(IInlineButtonsGenerationService buttonsGenerationService, ICategoriesService categoriesService)
+    public CategoriesController(IInlineButtonsGenerationService buttonsGenerationService, ICategoriesService categoriesService, IUsersActionsService usersActionsService)
     {
         _buttonsGenerationService = buttonsGenerationService;
         _categoriesService = categoriesService;
+        _usersActionsService = usersActionsService;
     }
 
     [Callback(nameof(DisplayCategories))]
-    [Callback($"{CallbacksTags.CategoryPagination}:(.*?);", isPattern: true)]
+    [Callback($"{CallbacksTags.Pagination}:(.*?);", isPattern: true)]
     [Callback($"{CallbacksTags.ParentCategory}:(.*?);", isPattern: true)]
-    [Callback($"{CallbacksTags.CategoryPagination}:(.*?);{CallbacksTags.ParentCategory}:(.*?);", isPattern: true)]
+    [Callback($"{CallbacksTags.Pagination}:(.*?);{CallbacksTags.ParentCategory}:(.*?);", isPattern: true)]
     public async Task DisplayCategories()
     {
         var showForParent = Guid.TryParse(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory), out var parentCategoryId);
-        var page = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.CategoryPagination) ?? "0";
+        var page = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Pagination) ?? "0";
         var pageNumber = int.Parse(page);
         ReadResult<Category> readResult;
         Category? parentCategory = null;
@@ -52,6 +54,38 @@ public class CategoriesController : BotController
         await SendCategoriesPaginationList(parentCategory);
     }
 
+    [Callback(nameof(StartCreatingCategory))]
+    [Callback($"{nameof(StartCreatingCategory)}:(.*?);", isPattern: true)]
+    public Task StartCreatingCategory()
+    {
+        var category = new Category();
+        var parentCategoryId = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory);
+        if (!string.IsNullOrWhiteSpace(parentCategoryId)) category.ParentCategoryId = Guid.Parse(parentCategoryId);
+
+        // TODO: add payload
+        _usersActionsService.HandleUser(Update.GetChatId(), nameof(StartCreatingCategory));
+
+        return Client.EditMessageTextAsync(Update.GetChatId(),
+            Update.CallbackQuery.Message.MessageId,
+            Messages.Categories.EnterCategoryName
+        );
+    }
+
+    [ActionStep(nameof(StartCreatingCategory), step: 0)]
+    public async Task CompleteCategoryCreating()
+    {
+        // TODO: get category from payload
+        var category = _usersActionsService.GetUserActionStepInfo(Update.GetChatId());
+        // await _categoriesService.AddCategory(category);
+
+        // _buttonsGenerationService.SetInlineButtons(category.GetCategoryButton());
+
+        await Client.SendTextMessageAsync(Update.GetChatId(),
+            Messages.Categories.CategoryCreated,
+            replyMarkup: _buttonsGenerationService.GetButtons()
+        );
+    }
+
     private void AddGoBackButton(Category? parentCategory)
     {
         if (parentCategory != null)
@@ -59,7 +93,7 @@ public class CategoriesController : BotController
             _buttonsGenerationService.SetInlineButtons(
                 (Messages.Elements.GoBack, parentCategory.ParentCategoryId == null
                     ? nameof(DisplayCategories)
-                    : $"{CallbacksTags.ParentCategory}:{parentCategory.ParentCategoryId}")
+                    : $"{CallbacksTags.ParentCategory}:{parentCategory.ParentCategoryId};")
             );
         }
     }
@@ -72,14 +106,20 @@ public class CategoriesController : BotController
         if (pageNumber > 0)
         {
             buttonsMarkup.Add((Messages.Elements.ArrowLeft,
-                $"{CallbacksTags.CategoryPagination}:{pageNumber - 1};{parentCategoryTag}"));
+                $"{CallbacksTags.Pagination}:{pageNumber - 1};{parentCategoryTag}"));
         }
 
-        buttonsMarkup.Add((Messages.Categories.ViewNotes, Messages.Categories.ViewNotes));
+        if (parentCategoryId != default)
+        {
+            buttonsMarkup.Add(
+                (Messages.Categories.ViewNotes, $"{nameof(NotesController.DisplayNotes)}:{parentCategoryId};")
+            );
+        }
+
         if (readResult.TotalCount > (pageNumber + 1) * PageSize)
         {
             buttonsMarkup.Add((Messages.Elements.ArrowRight,
-                $"{CallbacksTags.CategoryPagination}:{pageNumber + 1};{parentCategoryTag}"));
+                $"{CallbacksTags.Pagination}:{pageNumber + 1};{parentCategoryTag}"));
         }
 
         _buttonsGenerationService.SetInlineButtons(buttonsMarkup.ToArray());

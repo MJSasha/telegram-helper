@@ -14,6 +14,14 @@ public static class Extensions
         );
     }
 
+    public static (string, string) GetNoteButton(this Note note)
+    {
+        return (
+            note.Title.TrimName(),
+            $"{CallbacksTags.Note}:{note.Id};"
+        );
+    }
+
     public static string TrimName(this string name) => name.Length > 20 ? $"{name[..17]}..." : name;
 
 

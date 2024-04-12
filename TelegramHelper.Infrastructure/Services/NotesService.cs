@@ -1,4 +1,5 @@
 using TelegramHelper.Domain.Entities;
+using TelegramHelper.Domain.Models;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Infrastructure.Repositories;
 
@@ -25,5 +26,5 @@ internal class NotesService : INotesService
 
     public Task<List<Note>> GetByTitlePart(string name, int skip, int take) => _notesRepository.GetByTitlePart(name, skip, take);
 
-    public Task<List<Note>> GetNotesByCategoryId(Guid id) => _notesRepository.GetNotesByCategoryId(id);
+    public Task<ReadResult<Note>> GetNotesByCategoryId(Guid id, int skip, int take) => _notesRepository.GetNotesByCategoryId(id, skip, take);
 }
