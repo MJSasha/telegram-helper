@@ -32,7 +32,7 @@ public class BaseMessagesController : BotController
     [UnknownMessage]
     public Task UnknownMessage()
     {
-        return Client.SendMdTextMessage(Update.GetChatId(),
-            Messages.Base.UnknownMessage);
+        if (Update.Message?.ViaBot != null) return Task.CompletedTask;
+        return Client.SendMdTextMessage(Update.GetChatId(), Messages.Base.UnknownMessage);
     }
 }

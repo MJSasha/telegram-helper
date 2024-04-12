@@ -14,6 +14,7 @@ public static class Messages
         public const string ViewNotes = "📒 Заметки";
         public const string EnterCategoryName = "Введите категорию:";
         public const string CategoryCreated = "Категория добавлена!";
+        public const string CategoryTemplate = "*Категория: {0}*";
     }
 
     public class Notes

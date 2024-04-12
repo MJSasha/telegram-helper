@@ -21,7 +21,7 @@ internal class NotesService : INotesService
 
     public Task<Note> GetNoteById(Guid id, bool includeCategories = false) => _notesRepository.GetById(id, includeCategories);
 
-    public Task<List<Note>> GetByTitlePart(string name, int skip, int take) => _notesRepository.GetByTitlePart(name, skip, take);
+    public Task<List<Note>> GetByTitlePart(string name, int skip, int take, bool includeCategories = false) => _notesRepository.GetByTitlePart(name, skip, take, includeCategories);
 
     public Task<ReadResult<Note>> GetNotesByCategoryId(Guid id, int skip, int take) => _notesRepository.GetNotesByCategoryId(id, skip, take);
 }

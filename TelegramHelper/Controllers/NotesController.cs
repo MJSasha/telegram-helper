@@ -1,4 +1,6 @@
 using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramHelper.Definitions;
 using TelegramHelper.Domain.Entities;
@@ -6,6 +8,7 @@ using TelegramHelper.Domain.Models;
 using TelegramHelper.Infrastructure;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Utils;
+using TelegramHelper.Utils.Helpers;
 using TgBotLib.Core;
 using TgBotLib.Core.Base;
 
@@ -58,11 +61,15 @@ public class NotesController : BotController
         var noteId = new Guid(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Note));
         var note = await _notesService.GetNoteById(noteId, includeCategories: true);
 
-        var message = string.Format(Messages.Notes.NoteTemplate, note.Title, note.Content, GetCategoryHierarchy(note.Category));
-
-        Client.SendMdTextMessage(Update.GetChatId(), message);
+        var message = string.Format(Messages.Notes.NoteTemplate, note.Title, note.Content, MessageFormatHelper.GetCategoryHierarchy(note.Category));
+        AddGoBackButton(note.CategoryId);
+        Client.EditMessageTextAsync(Update.GetChatId(),
+            Update.CallbackQuery.Message.MessageId,
+            message.EscapeMarkdownSpecialCharacters(),
+            replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
+            parseMode: ParseMode.MarkdownV2
+        );
     }
-
 
     [Callback($"{nameof(StartNoteCreating)}:(.*?);", isPattern: true)]
     public async Task StartNoteCreating()
@@ -114,23 +121,29 @@ public class NotesController : BotController
         }
     }
 
-    private string GetCategoryHierarchy(Category category)
+    [InlineQuery]
+    public async Task ShowNoteSuggestions()
     {
-        if (category == null) return string.Empty;
+        var results = new List<InlineQueryResult>();
+        var notes = await _notesService.GetByTitlePart(Update.InlineQuery.Query, 0, PageSize, includeCategories: true);
 
-        var categoryHierarchy = new List<string>();
-        BuildCategoryHierarchy(category, categoryHierarchy);
-        categoryHierarchy.Reverse();
+        var counter = 0;
+        foreach (var note in notes)
+        {
+            var message = string.Format(Messages.Notes.NoteTemplate,
+                note.Title,
+                note.Content,
+                MessageFormatHelper.GetCategoryHierarchy(note.Category)
+            ).EscapeMarkdownSpecialCharacters();
 
-        return string.Join(" ➡ ", categoryHierarchy);
-    }
+            results.Add(new InlineQueryResultArticle($"{counter}", note.Title, new InputTextMessageContent(message)
+            {
+                ParseMode = ParseMode.MarkdownV2
+            }));
+            counter++;
+        }
 
-    private void BuildCategoryHierarchy(Category category, List<string> hierarchy)
-    {
-        if (category == null) return;
-
-        hierarchy.Add(category.Name);
-        BuildCategoryHierarchy(category.ParentCategory, hierarchy);
+        await Client.AnswerInlineQueryAsync(Update.InlineQuery.Id, results);
     }
 
     private void AddGoBackButton(Guid categoryId)

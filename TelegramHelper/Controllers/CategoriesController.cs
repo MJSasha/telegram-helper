@@ -1,4 +1,5 @@
 using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramHelper.Definitions;
 using TelegramHelper.Domain.Entities;
@@ -6,6 +7,7 @@ using TelegramHelper.Domain.Models;
 using TelegramHelper.Infrastructure;
 using TelegramHelper.Infrastructure.Interfaces;
 using TelegramHelper.Utils;
+using TelegramHelper.Utils.Helpers;
 using TgBotLib.Core;
 using TgBotLib.Core.Base;
 
@@ -46,7 +48,7 @@ public class CategoriesController : BotController
         }
         else
         {
-            parentCategory = await _categoriesService.GetCategoryById(parentCategoryId);
+            parentCategory = await _categoriesService.GetCategoryById(parentCategoryId, includeParent: true);
             readResult = await _categoriesService.GetSubCategories(parentCategoryId, pageNumber * PageSize, PageSize);
         }
 
@@ -162,15 +164,17 @@ public class CategoriesController : BotController
             await Client.EditMessageTextAsync(Update.GetChatId(),
                 Update.CallbackQuery.Message.MessageId,
                 text: Messages.Categories.SelectCategory,
-                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
+                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
+                parseMode: ParseMode.MarkdownV2
             );
         }
         else if (parentCategory != null)
         {
             await Client.EditMessageTextAsync(Update.GetChatId(),
                 Update.CallbackQuery.Message.MessageId,
-                text: parentCategory.Name,
-                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons()
+                text: string.Format(Messages.Categories.CategoryTemplate, MessageFormatHelper.GetCategoryHierarchy(parentCategory)),
+                replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
+                parseMode: ParseMode.MarkdownV2
             );
         }
         else

@@ -19,9 +19,11 @@ internal class CategoriesRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public Task<Category?> GetCategoryById(Guid id)
+    public async Task<Category?> GetCategoryById(Guid id, bool includeParent)
     {
-        return _dbContext.Categories.FirstOrDefaultAsync(x => x.Id == id);
+        var category = await _dbContext.Categories.FirstOrDefaultAsync(x => x.Id == id);
+        await LoadParentCategoriesRecursive(category);
+        return category;
     }
 
     public async Task<ReadResult<Category>> GetCategories(int skip, int take)
@@ -44,5 +46,17 @@ internal class CategoriesRepository
             Data = result,
             TotalCount = totalCount
         };
+    }
+
+    private async Task LoadParentCategoriesRecursive(Category category)
+    {
+        if (category == null || category.ParentCategoryId == null)
+            return;
+
+        await _dbContext.Entry(category)
+            .Reference(c => c.ParentCategory)
+            .LoadAsync();
+
+        await LoadParentCategoriesRecursive(category.ParentCategory);
     }
 }
