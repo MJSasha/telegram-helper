@@ -14,11 +14,8 @@ internal class NotesService : INotesService
         _notesRepository = notesRepository;
     }
 
-    public async Task AddNote(Note note, Guid categoryId)
+    public async Task AddNote(Note note)
     {
-        note.CategoryId = categoryId;
-
-        // TODO: check note exist
         await _notesRepository.Create(note);
     }
 

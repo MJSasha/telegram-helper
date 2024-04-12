@@ -16,6 +16,13 @@ public static class Messages
         public const string CategoryCreated = "Категория добавлена!";
     }
 
+    public class Notes
+    {
+        public const string EnterNoteTitle = "Введите название заметки:";
+        public const string EnterNoteText = "Введите заметку:";
+        public const string NoteCreated = "Заметка добавлена!";
+    }
+
     public static class Users
     {
         public const string EnterName = "Введите имя:";
@@ -27,6 +34,7 @@ public static class Messages
         public const string ArrowLeft = "⬅️";
         public const string ArrowRight = "➡️";
         public const string GoBack = "↩️";
-        public const string Add = "➕";
+        public const string AddCategory = "➕ Категорию";
+        public const string AddNote = "➕ Заметку";
     }
 }
