@@ -20,5 +20,11 @@ public class AppDbContext : DbContext
             .WithOne(n => n.Category)
             .HasForeignKey(n => n.CategoryId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Category>()
+            .HasOne(c => c.ParentCategory)
+            .WithMany(c => c.SubCategories)
+            .HasForeignKey(c => c.ParentCategoryId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
