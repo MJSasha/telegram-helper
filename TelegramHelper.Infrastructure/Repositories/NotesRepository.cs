@@ -79,4 +79,11 @@ internal class NotesRepository
 
         await LoadParentCategoriesRecursive(category.ParentCategory);
     }
+
+    public async Task Delete(Guid noteId)
+    {
+        var noteToDelete = await _dbContext.Notes.FirstOrDefaultAsync(n => n.Id == noteId);
+        _dbContext.Notes.Remove(noteToDelete);
+        await _dbContext.SaveChangesAsync();
+    }
 }

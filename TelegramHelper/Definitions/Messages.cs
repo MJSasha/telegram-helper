@@ -7,6 +7,7 @@ public static class Messages
         public const string StartText = @"Привет! 🌟 Я - твой личный бот для заметок. Выбери, чем мы с тобой сегодня будем заниматься.";
         public const string UnknownMessage = @"Ой, что-то пошло не так... Я не знаю, что ответить. 😕";
         public const string Canceled = @"Отмененно, продолжим работу /start!";
+        public const string Deleted = "Успешно удалено, продолжим работу /start!";
     }
 
     public static class Categories
@@ -40,6 +41,7 @@ public static class Messages
         public const string GoBack = "↩️ Назад";
         public const string AddCategory = "➕ Добавить категорию";
         public const string AddNote = "➕ Добавить заметку";
+        public const string Delete = "❌ Удалить";
     }
 
     public static class Commands

@@ -30,4 +30,15 @@ internal class UsersService : IUsersService
     {
         return currentUser?.Role is UserRole.Admin or UserRole.Editor;
     }
+
+    public async Task<bool> CheckUserCanDelete(long chatId)
+    {
+        var currentUser = await GetUser(chatId);
+        return currentUser?.Role is UserRole.Admin;
+    }
+
+    public bool CheckUserCanDelete(User currentUser)
+    {
+        return currentUser?.Role is UserRole.Admin;
+    }
 }

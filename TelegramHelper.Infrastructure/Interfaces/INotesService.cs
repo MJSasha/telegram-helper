@@ -9,4 +9,5 @@ public interface INotesService
     Task<Note> GetNoteById(Guid id, bool includeCategories = false);
     Task<List<Note>> GetByTitlePart(string name, int skip, int take, bool includeCategories = false);
     Task<ReadResult<Note>> GetNotesByCategoryId(Guid id, int skip, int take);
+    Task Delete(Guid noteId);
 }
