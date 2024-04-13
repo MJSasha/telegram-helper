@@ -19,7 +19,14 @@ public class UsersController : BotController
     [Message("/reg")]
     public async Task StartRegistration()
     {
-        await _usersService.AddUser(new User { ChatId = Update.GetChatId() });
+        var user = new User
+        {
+            ChatId = Update.GetChatId(),
+            FirstName = Update.Message.From.FirstName,
+            Username = Update.Message.From.Username,
+            LanguageCode = Update.Message.From.LanguageCode
+        };
+        await _usersService.AddUser(user);
         await Client.SendTextMessageAsync(Update.GetChatId(), string.Format(Messages.Users.YouAreRegistered, Update.GetChatId()));
     }
 }
