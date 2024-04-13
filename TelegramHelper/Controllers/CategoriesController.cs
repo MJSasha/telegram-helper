@@ -85,15 +85,24 @@ public class CategoriesController : BotController
         if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
         {
             var category = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Category>();
-            category.Name = Update.GetMessageText();
-            await _categoriesService.AddCategory(category);
+            var inputMessageText = Update.GetMessageText();
 
-            _buttonsGenerationService.SetInlineButtons(category.GetCategoryButton());
+            if (inputMessageText.Equals(Messages.Commands.Cancel))
+            {
+                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Canceled);
+            }
+            else
+            {
+                category.Name = inputMessageText;
+                await _categoriesService.AddCategory(category);
 
-            await Client.SendTextMessageAsync(Update.GetChatId(),
-                Messages.Categories.CategoryCreated,
-                replyMarkup: _buttonsGenerationService.GetButtons()
-            );
+                _buttonsGenerationService.SetInlineButtons(category.GetCategoryButton());
+
+                await Client.SendTextMessageAsync(Update.GetChatId(),
+                    Messages.Categories.CategoryCreated,
+                    replyMarkup: _buttonsGenerationService.GetButtons()
+                );
+            }
         }
     }
 

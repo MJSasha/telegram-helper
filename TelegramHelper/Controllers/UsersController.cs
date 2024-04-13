@@ -16,7 +16,7 @@ public class UsersController : BotController
         _usersService = usersService;
     }
 
-    [Message("/reg")]
+    [Message(Messages.Commands.Reg)]
     public async Task StartRegistration()
     {
         var user = new User

@@ -14,7 +14,7 @@ public class BaseMessagesController : BotController
         _buttonsGenerationService = buttonsGenerationService;
     }
 
-    [Message("/start")]
+    [Message(Messages.Commands.Start)]
     public async Task Start()
     {
         await Client.DeleteMessageAsync(Update.GetChatId(), Update.Message.MessageId);

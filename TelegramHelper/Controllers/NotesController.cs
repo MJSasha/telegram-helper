@@ -99,9 +99,18 @@ public class NotesController : BotController
         if (_usersService.CheckUserCanEdit(currentUser))
         {
             var note = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Note>();
-            note.Title = Update.GetMessageText();
+            var inputMessageText = Update.GetMessageText();
 
-            await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Notes.EnterNoteText);
+            if (inputMessageText.Equals(Messages.Commands.Cancel))
+            {
+                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Canceled);
+                _usersActionsService.RemoveUser(Update.GetChatId());
+            }
+            else
+            {
+                note.Title = inputMessageText;
+                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Notes.EnterNoteText);
+            }
         }
     }
 
@@ -112,14 +121,23 @@ public class NotesController : BotController
         if (_usersService.CheckUserCanEdit(currentUser))
         {
             var note = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Note>();
-            note.Content = Update.GetMessageText();
-            await _notesService.AddNote(note);
+            var inputMessageText = Update.GetMessageText();
 
-            _buttonsGenerationService.SetInlineButtons(note.GetNoteButton());
-            await Client.SendTextMessageAsync(Update.GetChatId(),
-                Messages.Notes.NoteCreated,
-                replyMarkup: _buttonsGenerationService.GetButtons()
-            );
+            if (inputMessageText.Equals(Messages.Commands.Cancel))
+            {
+                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Canceled);
+            }
+            else
+            {
+                note.Content = inputMessageText;
+                await _notesService.AddNote(note);
+
+                _buttonsGenerationService.SetInlineButtons(note.GetNoteButton());
+                await Client.SendTextMessageAsync(Update.GetChatId(),
+                    Messages.Notes.NoteCreated,
+                    replyMarkup: _buttonsGenerationService.GetButtons()
+                );
+            }
         }
     }
 
