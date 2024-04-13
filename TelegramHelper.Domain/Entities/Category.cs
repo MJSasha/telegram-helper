@@ -7,4 +7,5 @@ public class Category
     public Guid? ParentCategoryId { get; set; }
     public Category ParentCategory { get; set; }
     public ICollection<Category> SubCategories { get; set; }
+    public ICollection<Note> Notes { get; set; }
 }

@@ -36,8 +36,8 @@ public class CategoriesController : BotController
     [Callback($"{CallbacksTags.Pagination}:(.*?);{CallbacksTags.ParentCategory}:(.*?);", isPattern: true)]
     public async Task DisplayCategories()
     {
-        var showForParent = Guid.TryParse(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.ParentCategory), out var parentCategoryId);
-        var page = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Pagination) ?? "0";
+        var showForParent = Guid.TryParse(InputText.GetTagValue(CallbacksTags.ParentCategory), out var parentCategoryId);
+        var page = InputText.GetTagValue(CallbacksTags.Pagination) ?? "0";
         var pageNumber = int.Parse(page);
         ReadResult<Category> readResult;
         Category? parentCategory = null;
@@ -55,7 +55,7 @@ public class CategoriesController : BotController
         AddCategoriesButtons(readResult.Data);
         AddPaginationButtons(pageNumber, readResult, showForParent ? parentCategoryId : null);
         AddGoBackButton(parentCategory);
-        await AddCreateButton(parentCategory);
+        await AddRedactionButtons(parentCategory);
 
         await SendCategoriesPaginationList(parentCategory);
     }
@@ -64,15 +64,15 @@ public class CategoriesController : BotController
     [Callback($"{nameof(StartCreatingCategory)}:(.*?);", isPattern: true)]
     public async Task StartCreatingCategory()
     {
-        if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
+        if (await _usersService.CheckUserCanEdit(ChatId))
         {
             var category = new Category();
-            var parentCategoryId = Update.CallbackQuery.Data.GetTagValue(nameof(StartCreatingCategory));
+            var parentCategoryId = InputText.GetTagValue(nameof(StartCreatingCategory));
             if (!string.IsNullOrWhiteSpace(parentCategoryId)) category.ParentCategoryId = Guid.Parse(parentCategoryId);
 
-            _usersActionsService.HandleUser(Update.GetChatId(), nameof(StartCreatingCategory), category);
+            _usersActionsService.HandleUser(ChatId, nameof(StartCreatingCategory), category);
 
-            await Client.EditMessageTextAsync(Update.GetChatId(),
+            await Client.EditMessageTextAsync(ChatId,
                 Update.CallbackQuery.Message.MessageId,
                 Messages.Categories.EnterCategoryName
             );
@@ -82,14 +82,14 @@ public class CategoriesController : BotController
     [ActionStep(nameof(StartCreatingCategory), step: 0)]
     public async Task CompleteCategoryCreating()
     {
-        if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
+        if (await _usersService.CheckUserCanEdit(ChatId))
         {
-            var category = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Category>();
-            var inputMessageText = Update.GetMessageText();
+            var category = _usersActionsService.GetUserActionStepInfo(ChatId).GetPayload<Category>();
+            var inputMessageText = InputText;
 
             if (inputMessageText.Equals(Messages.Commands.Cancel))
             {
-                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Canceled);
+                await Client.SendTextMessageAsync(ChatId, Messages.Base.Canceled);
             }
             else
             {
@@ -98,7 +98,7 @@ public class CategoriesController : BotController
 
                 _buttonsGenerationService.SetInlineButtons(category.GetCategoryButton());
 
-                await Client.SendTextMessageAsync(Update.GetChatId(),
+                await Client.SendTextMessageAsync(ChatId,
                     Messages.Categories.CategoryCreated,
                     replyMarkup: _buttonsGenerationService.GetButtons()
                 );
@@ -106,17 +106,32 @@ public class CategoriesController : BotController
         }
     }
 
-    private async Task AddCreateButton(Category? parentCategory)
+    [Callback($"{nameof(DeleteCategory)}:(.*?);", isPattern: true)]
+    public async Task DeleteCategory()
     {
-        if (await _usersService.CheckUserCanEdit(Update.GetChatId()))
+        if (await _usersService.CheckUserCanDelete(ChatId))
+        {
+            var categoryId = new Guid(InputText.GetTagValue(nameof(DeleteCategory)));
+            await _categoriesService.Delete(categoryId);
+            await Client.SendTextMessageAsync(ChatId, Messages.Base.Deleted);
+        }
+    }
+
+    private async Task AddRedactionButtons(Category? parentCategory)
+    {
+        if (await _usersService.CheckUserCanEdit(ChatId))
         {
             List<(string, string)> markup = [];
             if (parentCategory != null)
             {
-                markup.AddRange([
-                    (Messages.Elements.AddCategory, $"{nameof(StartCreatingCategory)}:{parentCategory.Id};"),
-                    (Messages.Elements.AddNote, $"{nameof(NotesController.StartNoteCreating)}:{parentCategory.Id};")
-                ]);
+                markup.Add((Messages.Elements.AddCategory, $"{nameof(StartCreatingCategory)}:{parentCategory.Id};"));
+
+                if (await _usersService.CheckUserCanDelete(ChatId))
+                {
+                    markup.Add((Messages.Elements.Delete, $"{nameof(DeleteCategory)}:{parentCategory.Id};"));
+                }
+
+                markup.Add((Messages.Elements.AddNote, $"{nameof(NotesController.StartNoteCreating)}:{parentCategory.Id};"));
             }
             else
             {
@@ -168,9 +183,9 @@ public class CategoriesController : BotController
 
     private async Task SendCategoriesPaginationList(Category? parentCategory)
     {
-        if (Update.CallbackQuery.Data.Equals(nameof(DisplayCategories)))
+        if (InputText.Equals(nameof(DisplayCategories)))
         {
-            await Client.EditMessageTextAsync(Update.GetChatId(),
+            await Client.EditMessageTextAsync(ChatId,
                 Update.CallbackQuery.Message.MessageId,
                 text: Messages.Categories.SelectCategory,
                 replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
@@ -180,7 +195,7 @@ public class CategoriesController : BotController
         else if (parentCategory != null)
         {
             var message = string.Format(Messages.Categories.CategoryTemplate, MessageFormatHelper.GetCategoryHierarchy(parentCategory));
-            await Client.EditMessageTextAsync(Update.GetChatId(),
+            await Client.EditMessageTextAsync(ChatId,
                 Update.CallbackQuery.Message.MessageId,
                 text: message.EscapeMarkdownSpecialCharacters(),
                 replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
@@ -189,7 +204,7 @@ public class CategoriesController : BotController
         }
         else
         {
-            await Client.EditMessageReplyMarkupAsync(Update.GetChatId(),
+            await Client.EditMessageReplyMarkupAsync(ChatId,
                 Update.CallbackQuery.Message.MessageId,
                 replyMarkup: (InlineKeyboardMarkup?)_buttonsGenerationService.GetButtons()
             );

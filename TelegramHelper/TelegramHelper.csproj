@@ -12,7 +12,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="TgBotLib.Core" Version="1.2.5"/>
+        <PackageReference Include="TgBotLib.Core" Version="1.2.6"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -17,13 +17,13 @@ public class BaseMessagesController : BotController
     [Message(Messages.Commands.Start)]
     public async Task Start()
     {
-        await Client.DeleteMessageAsync(Update.GetChatId(), Update.Message.MessageId);
+        await Client.DeleteMessageAsync(ChatId, Update.Message.MessageId);
 
         _buttonsGenerationService.SetInlineButtons(
             ("Категории", nameof(CategoriesController.DisplayCategories))
         );
 
-        await Client.SendMdTextMessage(Update.GetChatId(),
+        await Client.SendMdTextMessage(ChatId,
             Messages.Base.StartText,
             replyMarkup: _buttonsGenerationService.GetButtons());
     }
@@ -33,6 +33,6 @@ public class BaseMessagesController : BotController
     public Task UnknownMessage()
     {
         if (Update.Message?.ViaBot != null) return Task.CompletedTask;
-        return Client.SendMdTextMessage(Update.GetChatId(), Messages.Base.UnknownMessage);
+        return Client.SendMdTextMessage(ChatId, Messages.Base.UnknownMessage);
     }
 }
