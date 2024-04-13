@@ -37,8 +37,8 @@ public class NotesController : BotController
     [Callback($"{nameof(DisplayNotes)}:(.*?);{CallbacksTags.Pagination}:(.*?);", isPattern: true)]
     public async Task DisplayNotes()
     {
-        var categoryId = new Guid(Update.CallbackQuery.Data.GetTagValue(nameof(DisplayNotes)));
-        var page = Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Pagination) ?? "0";
+        var categoryId = new Guid(InputText.GetTagValue(nameof(DisplayNotes)));
+        var page = InputText.GetTagValue(CallbacksTags.Pagination) ?? "0";
         var pageNumber = int.Parse(page);
         var category = await _categoriesService.GetCategoryById(categoryId, includeParent: true);
         var readResult = await _notesService.GetNotesByCategoryId(categoryId, pageNumber * PageSize, PageSize);
@@ -49,7 +49,7 @@ public class NotesController : BotController
 
         var message = string.Format(Messages.Notes.CategoryTitleTemplate, MessageFormatHelper.GetCategoryHierarchy(category));
         await Client.EditMessageTextAsync(
-            Update.GetChatId(),
+            ChatId,
             Update.CallbackQuery.Message.MessageId,
             text: message.EscapeMarkdownSpecialCharacters(),
             replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
@@ -60,20 +60,20 @@ public class NotesController : BotController
     [Callback($"{CallbacksTags.Note}:(.*?);", isPattern: true)]
     public async Task ShowNote()
     {
-        var noteId = new Guid(Update.CallbackQuery.Data.GetTagValue(CallbacksTags.Note));
+        var noteId = new Guid(InputText.GetTagValue(CallbacksTags.Note));
         var note = await _notesService.GetNoteById(noteId, includeCategories: true);
 
         var message = string.Format(Messages.Notes.NoteTemplate, note.Title, note.Content, MessageFormatHelper.GetCategoryHierarchy(note.Category));
         AddGoBackButton(note.CategoryId);
 
-        if (await _usersService.CheckUserCanDelete(Update.GetChatId()))
+        if (await _usersService.CheckUserCanDelete(ChatId))
         {
             _buttonsGenerationService.SetInlineButtons(
                 (Messages.Elements.Delete, $"{nameof(DeleteNote)}:{noteId};")
             );
         }
 
-        Client.EditMessageTextAsync(Update.GetChatId(),
+        Client.EditMessageTextAsync(ChatId,
             Update.CallbackQuery.Message.MessageId,
             message.EscapeMarkdownSpecialCharacters(),
             replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
@@ -84,48 +84,51 @@ public class NotesController : BotController
     [Callback($"{nameof(DeleteNote)}:(.*?);", isPattern: true)]
     public async Task DeleteNote()
     {
-        var noteId = new Guid(Update.CallbackQuery.Data.GetTagValue(nameof(DeleteNote)));
-        await _notesService.Delete(noteId);
-        await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Deleted);
+        if (await _usersService.CheckUserCanDelete(ChatId))
+        {
+            var noteId = new Guid(InputText.GetTagValue(nameof(DeleteNote)));
+            await _notesService.Delete(noteId);
+            await Client.SendTextMessageAsync(ChatId, Messages.Base.Deleted);
+        }
     }
 
     [Callback($"{nameof(StartNoteCreating)}:(.*?);", isPattern: true)]
     public async Task StartNoteCreating()
     {
-        var currentUser = await _usersService.GetUser(Update.GetChatId());
+        var currentUser = await _usersService.GetUser(ChatId);
         if (_usersService.CheckUserCanEdit(currentUser))
         {
-            var categoryId = new Guid(Update.CallbackQuery.Data.GetTagValue(nameof(StartNoteCreating)));
+            var categoryId = new Guid(InputText.GetTagValue(nameof(StartNoteCreating)));
             var note = new Note
             {
                 CategoryId = categoryId,
                 AuthorId = currentUser.Id
             };
 
-            _usersActionsService.HandleUser(Update.GetChatId(), nameof(StartNoteCreating), note);
+            _usersActionsService.HandleUser(ChatId, nameof(StartNoteCreating), note);
 
-            await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Notes.EnterNoteTitle);
+            await Client.SendTextMessageAsync(ChatId, Messages.Notes.EnterNoteTitle);
         }
     }
 
     [ActionStep(nameof(StartNoteCreating), step: 0)]
     public async Task AddNoteTitle()
     {
-        var currentUser = await _usersService.GetUser(Update.GetChatId());
+        var currentUser = await _usersService.GetUser(ChatId);
         if (_usersService.CheckUserCanEdit(currentUser))
         {
-            var note = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Note>();
-            var inputMessageText = Update.GetMessageText();
+            var note = _usersActionsService.GetUserActionStepInfo(ChatId).GetPayload<Note>();
+            var inputMessageText = InputText;
 
             if (inputMessageText.Equals(Messages.Commands.Cancel))
             {
-                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Canceled);
-                _usersActionsService.RemoveUser(Update.GetChatId());
+                await Client.SendTextMessageAsync(ChatId, Messages.Base.Canceled);
+                _usersActionsService.RemoveUser(ChatId);
             }
             else
             {
                 note.Title = inputMessageText;
-                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Notes.EnterNoteText);
+                await Client.SendTextMessageAsync(ChatId, Messages.Notes.EnterNoteText);
             }
         }
     }
@@ -133,15 +136,15 @@ public class NotesController : BotController
     [ActionStep(nameof(StartNoteCreating), step: 1)]
     public async Task CompleteNoteCreating()
     {
-        var currentUser = await _usersService.GetUser(Update.GetChatId());
+        var currentUser = await _usersService.GetUser(ChatId);
         if (_usersService.CheckUserCanEdit(currentUser))
         {
-            var note = _usersActionsService.GetUserActionStepInfo(Update.GetChatId()).GetPayload<Note>();
-            var inputMessageText = Update.GetMessageText();
+            var note = _usersActionsService.GetUserActionStepInfo(ChatId).GetPayload<Note>();
+            var inputMessageText = InputText;
 
             if (inputMessageText.Equals(Messages.Commands.Cancel))
             {
-                await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Canceled);
+                await Client.SendTextMessageAsync(ChatId, Messages.Base.Canceled);
             }
             else
             {
@@ -149,7 +152,7 @@ public class NotesController : BotController
                 await _notesService.AddNote(note);
 
                 _buttonsGenerationService.SetInlineButtons(note.GetNoteButton());
-                await Client.SendTextMessageAsync(Update.GetChatId(),
+                await Client.SendTextMessageAsync(ChatId,
                     Messages.Notes.NoteCreated,
                     replyMarkup: _buttonsGenerationService.GetButtons()
                 );

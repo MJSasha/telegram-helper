@@ -21,4 +21,5 @@ internal class CategoriesService : ICategoriesService
     public Task<ReadResult<Category>> GetCategories(int skip, int take) => _categoriesRepository.GetCategories(skip, take);
 
     public Task<ReadResult<Category>> GetSubCategories(Guid categoryId, int skip, int take) => _categoriesRepository.GetSubCategories(categoryId, skip, take);
+    public Task Delete(Guid categoryId) => _categoriesRepository.Delete(categoryId);
 }

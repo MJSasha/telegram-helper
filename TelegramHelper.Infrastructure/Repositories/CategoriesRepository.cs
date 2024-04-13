@@ -59,4 +59,11 @@ internal class CategoriesRepository
 
         await LoadParentCategoriesRecursive(category.ParentCategory);
     }
+
+    public async Task Delete(Guid categoryId)
+    {
+        var categoryToDelete = await _dbContext.Categories.FirstOrDefaultAsync(n => n.Id == categoryId);
+        _dbContext.Categories.Remove(categoryToDelete);
+        await _dbContext.SaveChangesAsync();
+    }
 }

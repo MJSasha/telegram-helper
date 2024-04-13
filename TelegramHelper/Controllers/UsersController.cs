@@ -21,12 +21,12 @@ public class UsersController : BotController
     {
         var user = new User
         {
-            ChatId = Update.GetChatId(),
+            ChatId = ChatId,
             FirstName = Update.Message.From.FirstName,
             Username = Update.Message.From.Username,
             LanguageCode = Update.Message.From.LanguageCode
         };
         await _usersService.AddUser(user);
-        await Client.SendTextMessageAsync(Update.GetChatId(), string.Format(Messages.Users.YouAreRegistered, Update.GetChatId()));
+        await Client.SendTextMessageAsync(ChatId, string.Format(Messages.Users.YouAreRegistered, ChatId));
     }
 }
