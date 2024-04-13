@@ -9,4 +9,6 @@ public interface IUsersService
     Task<User> GetUser(Guid id);
     Task<bool> CheckUserCanEdit(long chatId);
     bool CheckUserCanEdit(User currentUser);
+    Task<bool> CheckUserCanDelete(long chatId);
+    bool CheckUserCanDelete(User currentUser);
 }

@@ -65,12 +65,28 @@ public class NotesController : BotController
 
         var message = string.Format(Messages.Notes.NoteTemplate, note.Title, note.Content, MessageFormatHelper.GetCategoryHierarchy(note.Category));
         AddGoBackButton(note.CategoryId);
+
+        if (await _usersService.CheckUserCanDelete(Update.GetChatId()))
+        {
+            _buttonsGenerationService.SetInlineButtons(
+                (Messages.Elements.Delete, $"{nameof(DeleteNote)}:{noteId};")
+            );
+        }
+
         Client.EditMessageTextAsync(Update.GetChatId(),
             Update.CallbackQuery.Message.MessageId,
             message.EscapeMarkdownSpecialCharacters(),
             replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),
             parseMode: ParseMode.MarkdownV2
         );
+    }
+
+    [Callback($"{nameof(DeleteNote)}:(.*?);", isPattern: true)]
+    public async Task DeleteNote()
+    {
+        var noteId = new Guid(Update.CallbackQuery.Data.GetTagValue(nameof(DeleteNote)));
+        await _notesService.Delete(noteId);
+        await Client.SendTextMessageAsync(Update.GetChatId(), Messages.Base.Deleted);
     }
 
     [Callback($"{nameof(StartNoteCreating)}:(.*?);", isPattern: true)]
