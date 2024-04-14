@@ -32,6 +32,7 @@ public static class Messages
     {
         public const string EnterName = "Как к тебе обращаться? 🤔";
         public const string YouAreRegistered = "Ты успешно зарегистрирован! Твой уникальный код: {0}\n\nДавай начнем! Нажми /start";
+        public const string YouAlreadyRegistered = "Ты уже зарегистрирован...";
     }
 
     public static class Elements
