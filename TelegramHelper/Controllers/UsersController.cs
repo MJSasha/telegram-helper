@@ -19,6 +19,12 @@ public class UsersController : BotController
     [Message(Messages.Commands.Reg)]
     public async Task StartRegistration()
     {
+        var existedUser = await _usersService.GetUser(ChatId);
+        if (existedUser != null)
+        {
+            Client.SendMdTextMessage(ChatId, Messages.Users.YouAlreadyRegistered);
+        }
+
         var user = new User
         {
             ChatId = ChatId,

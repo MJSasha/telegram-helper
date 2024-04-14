@@ -73,7 +73,7 @@ public class NotesController : BotController
             );
         }
 
-        Client.EditMessageTextAsync(ChatId,
+        await Client.EditMessageTextAsync(ChatId,
             Update.CallbackQuery.Message.MessageId,
             message.EscapeMarkdownSpecialCharacters(),
             replyMarkup: (InlineKeyboardMarkup)_buttonsGenerationService.GetButtons(),

@@ -9,7 +9,7 @@ public static class Extensions
     public static (string, string) GetCategoryButton(this Category category)
     {
         return (
-            category.Name.TrimName(),
+            category.Name,
             $"{CallbacksTags.ParentCategory}:{category.Id};"
         );
     }
@@ -17,13 +17,10 @@ public static class Extensions
     public static (string, string) GetNoteButton(this Note note)
     {
         return (
-            note.Title.TrimName(),
+            note.Title,
             $"{CallbacksTags.Note}:{note.Id};"
         );
     }
-
-    public static string TrimName(this string name) => name.Length > 20 ? $"{name[..17]}..." : name;
-
 
     public static string? GetTagValue(this string? tagString, string tagName)
     {
