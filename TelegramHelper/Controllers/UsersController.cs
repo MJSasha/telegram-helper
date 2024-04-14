@@ -24,15 +24,17 @@ public class UsersController : BotController
         {
             Client.SendMdTextMessage(ChatId, Messages.Users.YouAlreadyRegistered);
         }
-
-        var user = new User
+        else
         {
-            ChatId = ChatId,
-            FirstName = Update.Message.From.FirstName,
-            Username = Update.Message.From.Username,
-            LanguageCode = Update.Message.From.LanguageCode
-        };
-        await _usersService.AddUser(user);
-        await Client.SendTextMessageAsync(ChatId, string.Format(Messages.Users.YouAreRegistered, ChatId));
+            var user = new User
+            {
+                ChatId = ChatId,
+                FirstName = Update.Message.From.FirstName,
+                Username = Update.Message.From.Username,
+                LanguageCode = Update.Message.From.LanguageCode
+            };
+            await _usersService.AddUser(user);
+            await Client.SendTextMessageAsync(ChatId, string.Format(Messages.Users.YouAreRegistered, ChatId));
+        }
     }
 }
