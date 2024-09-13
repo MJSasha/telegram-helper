@@ -16,11 +16,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\TelegramHelper.Domain\TelegramHelper.Domain.csproj"/>
-        <ProjectReference Include="..\TelegramHelper.Infrastructure\TelegramHelper.Infrastructure.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <Content Include="..\.dockerignore">
             <Link>.dockerignore</Link>
         </Content>
