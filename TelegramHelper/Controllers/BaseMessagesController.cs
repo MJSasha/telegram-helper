@@ -17,15 +17,7 @@ public class BaseMessagesController : BotController
     [Message(Messages.Commands.Start)]
     public async Task Start()
     {
-        await Client.DeleteMessageAsync(ChatId, Update.Message.MessageId);
-
-        _buttonsGenerationService.SetInlineButtons(
-            ("Категории", nameof(CategoriesController.DisplayCategories))
-        );
-
-        await Client.SendMdTextMessage(ChatId,
-            Messages.Base.StartText,
-            replyMarkup: _buttonsGenerationService.GetButtons());
+        await Client.SendTextMessageAsync(ChatId, "Ну привет");
     }
 
     [UnknownUpdate]
