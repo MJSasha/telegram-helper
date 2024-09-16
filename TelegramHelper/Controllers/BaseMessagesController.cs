@@ -12,8 +12,8 @@ namespace TelegramHelper.Controllers
 {
     public class BaseMessagesController : BotController
     {
-        private const string TopicsFilePath = "topics.json";
-        private static readonly ConcurrentDictionary<string, ForumTopic> TopicCache = new ConcurrentDictionary<string, ForumTopic>();
+        private const string TopicsFilePath = "/app/data/topics.json";
+        private static readonly ConcurrentDictionary<long, ConcurrentDictionary<string, ForumTopic>> GroupTopicCache = new();
 
         public BaseMessagesController()
         {
@@ -33,6 +33,7 @@ namespace TelegramHelper.Controllers
             var message = Update.Message;
             if (message is { Type: MessageType.Text, Chat.Type: ChatType.Supergroup })
             {
+                var chatId = message.Chat.Id;
                 var text = message.Text;
                 if (text != null)
                 {
@@ -41,14 +42,14 @@ namespace TelegramHelper.Controllers
                     foreach (var detectedTag in tags)
                     {
                         var topicTitle = detectedTag.TrimStart('#');
-                        var chatId = message.Chat.Id;
 
-                        var topic = TopicCache.Values.FirstOrDefault(t => t.Name == topicTitle);
+                        var groupTopicCache = GroupTopicCache.GetOrAdd(chatId, _ => new ConcurrentDictionary<string, ForumTopic>());
+                        var topic = groupTopicCache.Values.FirstOrDefault(t => t.Name == topicTitle);
 
                         if (topic == null)
                         {
-                            topic = await CreateTopicAsync(topicTitle);
-                            await SaveTopicAsync(topic);
+                            topic = await CreateTopicAsync(chatId, topicTitle);
+                            await SaveTopicAsync(chatId, topic);
                         }
 
                         await ForwardMessageToTopic(chatId, message.MessageId, topic.MessageThreadId);
@@ -65,37 +66,46 @@ namespace TelegramHelper.Controllers
             return tags;
         }
 
-        private async Task<List<ForumTopic>> GetTopicsFromFileAsync()
+        private async Task<Dictionary<long, List<ForumTopic>>> GetTopicsFromFileAsync()
         {
             if (!File.Exists(TopicsFilePath))
             {
-                return new List<ForumTopic>();
+                return new Dictionary<long, List<ForumTopic>>();
             }
 
             var json = await File.ReadAllTextAsync(TopicsFilePath);
-            return JsonConvert.DeserializeObject<List<ForumTopic>>(json) ?? new List<ForumTopic>();
+            return JsonConvert.DeserializeObject<Dictionary<long, List<ForumTopic>>>(json) ?? new Dictionary<long, List<ForumTopic>>();
         }
 
         private async Task LoadTopicsFromFileAsync()
         {
-            var topics = await GetTopicsFromFileAsync();
-            foreach (var topic in topics)
+            var topicsByGroup = await GetTopicsFromFileAsync();
+            foreach (var (groupId, topics) in topicsByGroup)
             {
-                TopicCache[topic.Name] = topic;
+                var groupTopicCache = new ConcurrentDictionary<string, ForumTopic>();
+                foreach (var topic in topics)
+                {
+                    groupTopicCache[topic.Name] = topic;
+                }
+                GroupTopicCache[groupId] = groupTopicCache;
             }
         }
 
-        private async Task SaveTopicAsync(ForumTopic topic)
+        private async Task SaveTopicAsync(long chatId, ForumTopic topic)
         {
-            TopicCache[topic.Name] = topic;
-            var topics = TopicCache.Values.ToList();
-            var json = JsonConvert.SerializeObject(topics, Formatting.Indented);
+            var groupTopicCache = GroupTopicCache.GetOrAdd(chatId, _ => new ConcurrentDictionary<string, ForumTopic>());
+            groupTopicCache[topic.Name] = topic;
+            var topicsByGroup = GroupTopicCache.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Values.ToList()
+            );
+            var json = JsonConvert.SerializeObject(topicsByGroup, Formatting.Indented);
             await File.WriteAllTextAsync(TopicsFilePath, json);
         }
 
-        private async Task<ForumTopic> CreateTopicAsync(string title)
+        private async Task<ForumTopic> CreateTopicAsync(long chatId, string title)
         {
-            var createdTopic = await Client.CreateForumTopicAsync(ChatId, title);
+            var createdTopic = await Client.CreateForumTopicAsync(chatId, title);
             return new ForumTopic
             {
                 Name = title,
