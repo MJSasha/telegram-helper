@@ -1,0 +1,72 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # Job для сборки и пуша Docker-образа
+  push-docker-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Install Docker CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t telegram-helper-img -f TelegramHelper/Dockerfile .
+          docker tag telegram-helper-img "${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest"
+          docker push "${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest"
+
+  # Job для деплоя Docker-образа на сервер
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push-docker-image  # Эта задача выполнится только после успешного завершения push-docker-image
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Install SSH
+        run: sudo apt-get install openssh-client -y
+
+      - name: Create SSH key
+        run: |
+          sudo mkdir -p ~/.ssh/
+          sudo echo "$SSH_PRIVATE_KEY" > ../private.key
+          sudo chmod 600 ../private.key
+          sudo echo "$SSH_KNOWN_HOSTS" > ../known_hosts
+          sudo chmod 600 ../known_hosts
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
+          SSH_KNOWN_HOSTS: ${{secrets.SSH_KNOWN_HOSTS}}
+          SSH_KEY_PATH: ${{ github.workspace }}/../private.key
+
+      - name: Connect to server and update container
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ${{ github.workspace }}/../private.key root@${{secrets.SSH_KNOWN_HOSTS}} "
+            docker pull ${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest &&
+            if [ \$(docker ps -a -q -f name=telegram-helper-img) ]; then
+              docker stop telegram-helper-img &&
+              docker rm telegram-helper-img;
+            fi &&
+            docker run --network=\"host\" -d --name telegram-helper-img -e BOT_TOKEN='${{ secrets.BOT_TOKEN }}' -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' ${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest
+          "
