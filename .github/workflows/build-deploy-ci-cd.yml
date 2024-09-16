@@ -68,5 +68,10 @@ jobs:
               docker stop telegram-helper-img &&
               docker rm telegram-helper-img;
             fi &&
-            docker run --network=\"host\" -d --name telegram-helper-img -e BOT_TOKEN='${{ secrets.BOT_TOKEN }}' -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' ${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest
+            docker run --network=\"host\" -d --name telegram-helper-img \
+              -v /path/on/host:/app/data \
+              -e BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
+              -e COMPETITION_WEB_KEY='${{ secrets.COMPETITION_WEB_KEY }}' \
+              ${{ secrets.DOCKER_USERNAME }}/telegram-helper-img:latest
           "
+          
