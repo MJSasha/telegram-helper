@@ -15,8 +15,11 @@ namespace TelegramHelper.Controllers
         private const string TopicsFilePath = "/app/data/topics.json";
         private static readonly ConcurrentDictionary<long, ConcurrentDictionary<string, ForumTopic>> GroupTopicCache = new();
 
-        public BaseMessagesController()
+        private readonly ILogger<BaseMessagesController> _logger;
+
+        public BaseMessagesController(ILogger<BaseMessagesController> logger)
         {
+            _logger = logger;
             LoadTopicsFromFileAsync().Wait();
         }
 
@@ -109,7 +112,7 @@ namespace TelegramHelper.Controllers
             );
             var json = JsonConvert.SerializeObject(topicsByGroup, Formatting.Indented);
             await File.WriteAllTextAsync(TopicsFilePath, json);
-            Console.WriteLine($"Topic {topic.Name} created");
+            _logger.LogInformation("Topic {TopicName} created", topic.Name);
         }
 
         private async Task<ForumTopic> CreateTopicAsync(long chatId, string title)
