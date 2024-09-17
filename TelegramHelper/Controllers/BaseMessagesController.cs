@@ -60,7 +60,8 @@ namespace TelegramHelper.Controllers
 
         private static IEnumerable<string> ExtractTags(string text)
         {
-            var tags = text.Split(' ')
+            var delimiters = new[] { ' ', '\n', '\r' }; // Add space, newline, and carriage return as delimiters
+            var tags = text.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
                 .Where(word => word.StartsWith('#'))
                 .Distinct();
             return tags;
@@ -68,6 +69,12 @@ namespace TelegramHelper.Controllers
 
         private async Task<Dictionary<long, List<ForumTopic>>> GetTopicsFromFileAsync()
         {
+            var directory = Path.GetDirectoryName(TopicsFilePath);
+            if (directory != null && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
             if (!File.Exists(TopicsFilePath))
             {
                 return new Dictionary<long, List<ForumTopic>>();
@@ -76,6 +83,7 @@ namespace TelegramHelper.Controllers
             var json = await File.ReadAllTextAsync(TopicsFilePath);
             return JsonConvert.DeserializeObject<Dictionary<long, List<ForumTopic>>>(json) ?? new Dictionary<long, List<ForumTopic>>();
         }
+
 
         private async Task LoadTopicsFromFileAsync()
         {
