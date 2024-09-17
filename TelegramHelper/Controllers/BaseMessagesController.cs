@@ -12,7 +12,7 @@ namespace TelegramHelper.Controllers
 {
     public class BaseMessagesController : BotController
     {
-        private const string TopicsFilePath = "/botinfo/topics.json";
+        private const string TopicsFilePath = "/tmp/topics.json";
         private static readonly ConcurrentDictionary<long, ConcurrentDictionary<string, ForumTopic>> GroupTopicCache = new();
 
         private readonly ILogger<BaseMessagesController> _logger;
