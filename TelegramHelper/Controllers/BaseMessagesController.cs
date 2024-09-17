@@ -60,7 +60,7 @@ namespace TelegramHelper.Controllers
 
         private static IEnumerable<string> ExtractTags(string text)
         {
-            var delimiters = new[] { ' ', '\n', '\r' }; // Add space, newline, and carriage return as delimiters
+            var delimiters = new[] { ' ', '\n', '\r' };
             var tags = text.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
                 .Where(word => word.StartsWith('#'))
                 .Distinct();
@@ -109,6 +109,7 @@ namespace TelegramHelper.Controllers
             );
             var json = JsonConvert.SerializeObject(topicsByGroup, Formatting.Indented);
             await File.WriteAllTextAsync(TopicsFilePath, json);
+            Console.WriteLine($"Topic {topic.Name} created");
         }
 
         private async Task<ForumTopic> CreateTopicAsync(long chatId, string title)
