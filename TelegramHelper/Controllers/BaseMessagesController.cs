@@ -4,6 +4,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramHelper.Definitions;
+using TelegramHelper.Utils;
 using TgBotLib.Core;
 using TgBotLib.Core.Base;
 using File = System.IO.File;
@@ -16,10 +17,12 @@ namespace TelegramHelper.Controllers
         private static readonly ConcurrentDictionary<long, ConcurrentDictionary<string, ForumTopic>> GroupTopicCache = new();
 
         private readonly ILogger<BaseMessagesController> _logger;
+        private readonly IInlineButtonsGenerationService _buttonsGeneration;
 
-        public BaseMessagesController(ILogger<BaseMessagesController> logger)
+        public BaseMessagesController(ILogger<BaseMessagesController> logger, IInlineButtonsGenerationService buttonsGeneration)
         {
             _logger = logger;
+            _buttonsGeneration = buttonsGeneration;
             LoadTopicsFromFileAsync().Wait();
         }
 
@@ -36,38 +39,31 @@ namespace TelegramHelper.Controllers
             var message = Update.Message;
             if (message is { Type: MessageType.Text, Chat.Type: ChatType.Supergroup })
             {
-                var chatId = message.Chat.Id;
                 var text = message.Text;
                 if (text != null)
                 {
-                    var tags = ExtractTags(text);
+                    var tags = text.ExtractTags();
 
                     foreach (var detectedTag in tags)
                     {
                         var topicTitle = detectedTag.TrimStart('#');
 
-                        var groupTopicCache = GroupTopicCache.GetOrAdd(chatId, _ => new ConcurrentDictionary<string, ForumTopic>());
+                        var groupTopicCache = GroupTopicCache.GetOrAdd(ChatId, _ => new ConcurrentDictionary<string, ForumTopic>());
                         var topic = groupTopicCache.Values.FirstOrDefault(t => t.Name == topicTitle);
 
                         if (topic == null)
                         {
-                            topic = await CreateTopicAsync(chatId, topicTitle);
-                            await SaveTopicAsync(chatId, topic);
+                            topic = await CreateTopicAsync(ChatId, topicTitle);
+                            await SaveTopicAsync(ChatId, topic);
                         }
 
-                        await ForwardMessageToTopic(chatId, message.MessageId, topic.MessageThreadId);
+                        var sourceTopicName = Update.Message?.ReplyToMessage?.ForumTopicCreated?.Name ?? "General";
+                        sourceTopicName = sourceTopicName.Replace(' ', '_');
+
+                        await ForwardMessageToTopic(topic.MessageThreadId, sourceTopicName);
                     }
                 }
             }
-        }
-
-        private static IEnumerable<string> ExtractTags(string text)
-        {
-            var delimiters = new[] { ' ', '\n', '\r' };
-            var tags = text.Split(delimiters, StringSplitOptions.RemoveEmptyEntries)
-                .Where(word => word.StartsWith('#'))
-                .Distinct();
-            return tags;
         }
 
         private async Task<Dictionary<long, List<ForumTopic>>> GetTopicsFromFileAsync()
@@ -126,14 +122,22 @@ namespace TelegramHelper.Controllers
             };
         }
 
-        private async Task ForwardMessageToTopic(long chatId, int messageId, int threadId)
+        private async Task ForwardMessageToTopic(int threadId, string sourceTopicName)
         {
-            await Client.ForwardMessageAsync(
-                chatId: chatId,
-                fromChatId: chatId,
-                messageId: messageId,
+            var newText = Update.Message.Text.RemoveTags();
+
+            var topicTag = $"#{sourceTopicName}";
+
+            var newMessageText = $"{topicTag}\n\n{newText}";
+
+            _buttonsGeneration.SetInlineUrlButtons(("Перейти к исходному сообщению", $"https://t.me/c/{ChatId.ToString()[4..]}/{Update.Message.MessageId}"));
+
+            await Client.SendTextMessageAsync(
+                chatId: ChatId,
+                text: newMessageText,
+                messageThreadId: threadId,
                 disableNotification: true,
-                messageThreadId: threadId
+                replyMarkup: _buttonsGeneration.GetButtons()
             );
         }
     }
