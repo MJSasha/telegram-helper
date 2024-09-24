@@ -14,7 +14,9 @@ namespace TelegramHelper.Controllers
     public class BaseMessagesController : BotController
     {
         private const string TopicsFilePath = "/app/data/topics.json";
+        private const string PinnedMessagesFilePath = "/app/data/pinned_messages.json";
         private static readonly ConcurrentDictionary<long, ConcurrentDictionary<string, ForumTopic>> GroupTopicCache = new();
+        private static readonly ConcurrentDictionary<int, PinnedMessageInfo> PinnedMessageCache = new();
 
         private readonly ILogger<BaseMessagesController> _logger;
         private readonly IInlineButtonsGenerationService _buttonsGeneration;
@@ -24,6 +26,7 @@ namespace TelegramHelper.Controllers
             _logger = logger;
             _buttonsGeneration = buttonsGeneration;
             LoadTopicsFromFileAsync().Wait();
+            LoadPinnedMessagesFromFileAsync().Wait();
         }
 
         [Message(Messages.Commands.Start)]
@@ -60,6 +63,7 @@ namespace TelegramHelper.Controllers
                         var sourceTopicName = Update.Message?.ReplyToMessage?.ForumTopicCreated?.Name ?? "General";
                         sourceTopicName = sourceTopicName.Replace(' ', '_');
 
+                        await CheckAndUpdatePinnedMessageAsync(topic.MessageThreadId, $"#{sourceTopicName}");
                         await ForwardMessageToTopic(topic.MessageThreadId, sourceTopicName);
                     }
                 }
@@ -82,7 +86,6 @@ namespace TelegramHelper.Controllers
             var json = await File.ReadAllTextAsync(TopicsFilePath);
             return JsonConvert.DeserializeObject<Dictionary<long, List<ForumTopic>>>(json) ?? new Dictionary<long, List<ForumTopic>>();
         }
-
 
         private async Task LoadTopicsFromFileAsync()
         {
@@ -124,7 +127,7 @@ namespace TelegramHelper.Controllers
 
         private async Task ForwardMessageToTopic(int threadId, string sourceTopicName)
         {
-            var newText = Update.Message.Text.RemoveTags();
+            var newText = Update.Message!.Text!.RemoveTags();
 
             var topicTag = $"#{sourceTopicName}";
 
@@ -139,6 +142,80 @@ namespace TelegramHelper.Controllers
                 disableNotification: true,
                 replyMarkup: _buttonsGeneration.GetButtons()
             );
+        }
+
+        private async Task CheckAndUpdatePinnedMessageAsync(int topicMessageThreadId, string newTag)
+        {
+            var pinnedMessageInfo = PinnedMessageCache.GetOrAdd(topicMessageThreadId, _ => new PinnedMessageInfo());
+
+            if (pinnedMessageInfo.MessageId == 0)
+            {
+                var messageText = $"Список тегов:\n\n{newTag}";
+                var message = await Client.SendTextMessageAsync(
+                    chatId: ChatId,
+                    text: messageText,
+                    messageThreadId: topicMessageThreadId
+                );
+
+                pinnedMessageInfo.MessageId = message.MessageId;
+                pinnedMessageInfo.Text = messageText;
+
+                await Client.PinChatMessageAsync(ChatId, message.MessageId);
+                await SavePinnedMessageAsync(topicMessageThreadId, pinnedMessageInfo);
+            }
+            else
+            {
+                if (!pinnedMessageInfo.Text!.Contains(newTag))
+                {
+                    var updatedText = pinnedMessageInfo.Text + $"\n{newTag}";
+
+                    await Client.EditMessageTextAsync(
+                        chatId: ChatId,
+                        messageId: pinnedMessageInfo.MessageId,
+                        text: updatedText
+                    );
+
+                    pinnedMessageInfo.Text = updatedText;
+                    await SavePinnedMessageAsync(topicMessageThreadId, pinnedMessageInfo);
+                }
+            }
+        }
+
+        private async Task<Dictionary<int, PinnedMessageInfo>> GetPinnedMessagesFromFileAsync()
+        {
+            var directory = Path.GetDirectoryName(PinnedMessagesFilePath);
+            if (directory != null && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            if (!File.Exists(PinnedMessagesFilePath))
+            {
+                return new Dictionary<int, PinnedMessageInfo>();
+            }
+
+            var json = await File.ReadAllTextAsync(PinnedMessagesFilePath);
+            return JsonConvert.DeserializeObject<Dictionary<int, PinnedMessageInfo>>(json) ?? new Dictionary<int, PinnedMessageInfo>();
+        }
+
+        private async Task LoadPinnedMessagesFromFileAsync()
+        {
+            var pinnedMessages = await GetPinnedMessagesFromFileAsync();
+            foreach (var (threadId, pinnedMessageInfo) in pinnedMessages)
+            {
+                PinnedMessageCache[threadId] = pinnedMessageInfo;
+            }
+        }
+
+        private async Task SavePinnedMessageAsync(int threadId, PinnedMessageInfo pinnedMessageInfo)
+        {
+            PinnedMessageCache[threadId] = pinnedMessageInfo;
+            var pinnedMessages = PinnedMessageCache.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value
+            );
+            var json = JsonConvert.SerializeObject(pinnedMessages, Formatting.Indented);
+            await File.WriteAllTextAsync(PinnedMessagesFilePath, json);
         }
     }
 }
