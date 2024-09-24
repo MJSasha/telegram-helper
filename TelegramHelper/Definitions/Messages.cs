@@ -11,4 +11,9 @@ public static class Messages
     {
         public const string Start = "/start";
     }
+
+    public static class Buttons
+    {
+        public const string GoToSource = "Перейти к исходному сообщению";
+    }
 }

@@ -1,3 +1,5 @@
+using TelegramHelper.Interfaces;
+using TelegramHelper.Services;
 using TgBotLib.Core;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +9,10 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 builder.Services.AddBotLibCore(Environment.GetEnvironmentVariable("BOT_TOKEN"));
+
+builder.Services.AddSingleton<IForumTopicService, ForumTopicService>();
+builder.Services.AddSingleton<IPinnedMessageService, PinnedMessageService>();
+builder.Services.AddSingleton<IMessageForwardingService, MessageForwardingService>();
 
 var app = builder.Build();
 

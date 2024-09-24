@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace TelegramHelper.Utils;
 
 public static class TagsExtensions
@@ -6,8 +8,8 @@ public static class TagsExtensions
 
     public static string RemoveTags(this string text)
     {
-        var words = text.Split(Delimiters, StringSplitOptions.RemoveEmptyEntries);
-        return string.Join(" ", words.Where(word => !word.StartsWith('#')));
+        var pattern = @"\s*#\w+\s*";
+        return Regex.Replace(text, pattern, " ").Trim();
     }
 
     public static IEnumerable<string> ExtractTags(this string text)
