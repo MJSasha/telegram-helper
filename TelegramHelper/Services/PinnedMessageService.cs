@@ -60,7 +60,7 @@ public class PinnedMessageService : IPinnedMessageService
 
         if (pinnedMessageInfo.MessageId == 0)
         {
-            var messageText = $"Список тегов:\n\n{newTag}";
+            var messageText = $"Список тегов:\n\n▪️ {newTag}";
             var message = await _botClient.SendTextMessageAsync(
                 chatId: chatId,
                 text: messageText,
@@ -77,7 +77,7 @@ public class PinnedMessageService : IPinnedMessageService
         {
             if (!pinnedMessageInfo.Text!.Contains(newTag))
             {
-                var updatedText = pinnedMessageInfo.Text + $"\n{newTag}";
+                var updatedText = pinnedMessageInfo.Text + $"\n▪️ {newTag}";
 
                 await _botClient.EditMessageTextAsync(
                     chatId: chatId,
