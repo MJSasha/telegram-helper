@@ -10,12 +10,12 @@ namespace TelegramHelper.Services;
 public class MessageForwardingService : IMessageForwardingService
 {
     private readonly TelegramBotClient _botClient;
-    private readonly IInlineButtonsGenerationService _buttonsGeneration;
+    private readonly IServiceProvider _serviceProvider;
 
-    public MessageForwardingService(TelegramBotClient botClient, IInlineButtonsGenerationService buttonsGeneration)
+    public MessageForwardingService(TelegramBotClient botClient, IServiceProvider serviceProvider)
     {
         _botClient = botClient;
-        _buttonsGeneration = buttonsGeneration;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task ForwardTextMessageToTopic(long chatId, Update update, int threadId, string sourceTopicName)
@@ -26,13 +26,13 @@ public class MessageForwardingService : IMessageForwardingService
 
         var newMessageText = $"{topicTag}\n\n{newText}";
 
-        SetGoToButton(chatId, update.Message.MessageId);
+        var buttonsGeneration = SetGoToButton(chatId, update.Message.MessageId);
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
             text: newMessageText,
             messageThreadId: threadId,
             disableNotification: true,
-            replyMarkup: _buttonsGeneration.GetButtons()
+            replyMarkup: buttonsGeneration.GetButtons()
         );
     }
 
@@ -46,7 +46,6 @@ public class MessageForwardingService : IMessageForwardingService
             Caption = $"{topicTag}\n\n{originalText}"
         };
 
-        SetGoToButton(chatId, update.Message.MessageId);
         await _botClient.SendMediaGroupAsync(
             chatId: chatId,
             media: new[] { inputMediaPhoto },
@@ -61,14 +60,14 @@ public class MessageForwardingService : IMessageForwardingService
         var topicTag = $"#{sourceTopicName}";
         var originalText = update.Message!.Caption?.RemoveTags() ?? string.Empty;
 
-        SetGoToButton(chatId, update.Message.MessageId);
+        var buttonsGeneration = SetGoToButton(chatId, update.Message.MessageId);
         await _botClient.SendVideoAsync(
             chatId: chatId,
             video: new InputFileId(video.FileId),
             caption: $"{topicTag}\n\n{originalText}",
             messageThreadId: threadId,
             disableNotification: true,
-            replyMarkup: _buttonsGeneration.GetButtons()
+            replyMarkup: buttonsGeneration.GetButtons()
         );
     }
 
@@ -78,16 +77,21 @@ public class MessageForwardingService : IMessageForwardingService
         var topicTag = $"#{sourceTopicName}";
         var originalText = update.Message!.Caption?.RemoveTags() ?? string.Empty;
 
-        SetGoToButton(chatId, update.Message.MessageId);
+        var buttonsGeneration = SetGoToButton(chatId, update.Message.MessageId);
         await _botClient.SendDocumentAsync(
             chatId: chatId,
             document: new InputFileId(document.FileId),
             caption: $"{topicTag}\n\n{originalText}",
             messageThreadId: threadId,
             disableNotification: true,
-            replyMarkup: _buttonsGeneration.GetButtons()
+            replyMarkup: buttonsGeneration.GetButtons()
         );
     }
 
-    private void SetGoToButton(long chatId, long messageId) => _buttonsGeneration.SetInlineUrlButtons((Messages.Buttons.GoToSource, $"https://t.me/c/{chatId.ToString()[4..]}/{messageId}"));
+    private IInlineButtonsGenerationService SetGoToButton(long chatId, long messageId)
+    {
+        var buttonsGeneration = _serviceProvider.GetRequiredService<IInlineButtonsGenerationService>();
+        buttonsGeneration.SetInlineUrlButtons((Messages.Buttons.GoToSource, $"https://t.me/c/{chatId.ToString()[4..]}/{messageId}"));
+        return buttonsGeneration;
+    }
 }
