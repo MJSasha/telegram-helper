@@ -105,7 +105,7 @@ namespace TelegramHelper.Controllers
         private string GetTopicName(Message? message)
         {
             if (message == null) return "General";
-            if (message.ReplyToMessage == null) return message.ReplyToMessage?.ForumTopicCreated?.Name ?? "General";
+            if (message.ReplyToMessage == null) return message.ForumTopicCreated?.Name ?? "General";
             return GetTopicName(message.ReplyToMessage);
         }
     }
