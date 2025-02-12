@@ -1,4 +1,5 @@
 using Telegram.Bot;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramHelper.Definitions;
 using TelegramHelper.Interfaces;
@@ -33,6 +34,22 @@ namespace TelegramHelper.Controllers
             await Client.SendTextMessageAsync(ChatId, "Ну привет");
         }
 
+        [Message(@"топик .*", isPattern: true)]
+        public Task CreateTopic()
+        {
+            var topicName = Update?.Message?.Text?[4..];
+            if (string.IsNullOrWhiteSpace(topicName))
+            {
+                return Client.SendTextMessageAsync(
+                    ChatId,
+                    "Какой-то странный топик...",
+                    messageThreadId: Update?.Message?.MessageThreadId
+                );
+            }
+
+            return Client.CreateForumTopicAsync(ChatId, topicName);
+        }
+
         [UnknownUpdate]
         [UnknownMessage]
         public async Task UnknownMessage()
@@ -40,11 +57,20 @@ namespace TelegramHelper.Controllers
             var message = Update.Message;
             if (message is { Chat.Type: ChatType.Supergroup })
             {
-                var tags = message.Text?.ExtractTags() ?? message.Caption?.ExtractTags() ?? Array.Empty<string>();
+                var tags = message.Entities?.Where(e => e.Type == MessageEntityType.Hashtag)
+                    .Select(e => message.Text?.Substring(e.Offset, e.Length))
+                    .ToArray() ?? [];
 
-                foreach (var detectedTag in tags)
+                if (message.Text == null)
                 {
-                    var topicTitle = detectedTag.TrimStart('#');
+                    tags = message.Entities?.Where(e => e.Type == MessageEntityType.Hashtag)
+                        .Select(e => message.Caption?.Substring(e.Offset, e.Length))
+                        .ToArray() ?? [];
+                }
+
+                foreach (var detectedTag in tags.Where(t => !string.IsNullOrWhiteSpace(t)))
+                {
+                    var topicTitle = detectedTag!.TrimStart('#');
 
                     var topics = _forumTopicService.GetTopicsForChat(ChatId);
                     var topic = topics.Find(t => t.Name == topicTitle);
@@ -55,7 +81,7 @@ namespace TelegramHelper.Controllers
                         await _forumTopicService.SaveTopicAsync(ChatId, topic);
                     }
 
-                    var sourceTopicName = Update.Message?.ReplyToMessage?.ForumTopicCreated?.Name ?? "General";
+                    var sourceTopicName = GetTopicName(Update.Message);
                     sourceTopicName = sourceTopicName.Replace(' ', '_');
 
                     await _pinnedMessageService.CheckAndUpdatePinnedMessageAsync(ChatId, topic.MessageThreadId, $"#{sourceTopicName}");
@@ -71,6 +97,13 @@ namespace TelegramHelper.Controllers
                     await forwardTask;
                 }
             }
+        }
+
+        private string GetTopicName(Message? message)
+        {
+            if (message == null) return "General";
+            if (message.ReplyToMessage == null) return message.ReplyToMessage?.ForumTopicCreated?.Name ?? "General";
+            return GetTopicName(message.ReplyToMessage);
         }
     }
 }
