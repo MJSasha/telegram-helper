@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -37,7 +38,9 @@ namespace TelegramHelper.Controllers
         [Message(@"топик .*", isPattern: true)]
         public Task CreateTopic()
         {
-            var topicName = Update?.Message?.Text?[4..];
+            var messageText = Update?.Message?.Text ?? "";
+            var match = Regex.Match(messageText, @"топик (.*)");
+            var topicName = match.Groups[1].Value.Trim();
             if (string.IsNullOrWhiteSpace(topicName))
             {
                 return Client.SendTextMessageAsync(
